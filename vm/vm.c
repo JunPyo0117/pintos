@@ -5,6 +5,8 @@
 #include "threads/malloc.h"
 #include "vm/inspect.h"
 
+struct list frame_table;
+
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
 void vm_init(void) {
@@ -16,6 +18,7 @@ void vm_init(void) {
     register_inspect_intr();
     /* DO NOT MODIFY UPPER LINES. */
     /* TODO: Your code goes here. */
+    list_init(&frame_table);
 }
 
 /* Get the type of the page. This function is useful if you want to know the
@@ -83,16 +86,26 @@ static struct frame *vm_get_victim(void) {
     struct frame *victim = NULL;
     /* TODO: The policy for eviction is up to you. */
 
+    if (list_empty(&frame_table)) {
+        return NULL;
+    }
+    
+    // FIFO 정책: 가장 오래된 프레임을 victim으로 선택
+    struct list_elem *e = list_pop_front(&frame_table);
+
+    victim = list_entry(e, struct frame, frame_elem);
+    
     return victim;
 }
 
 /* Evict one page and return the corresponding frame.
  * Return NULL on error.*/
 static struct frame *vm_evict_frame(void) {
-    struct frame *victim UNUSED = vm_get_victim();
+    struct frame *victim = vm_get_victim();
     /* TODO: swap out the victim and return the evicted frame. */
+    swap_out(victim->page);
 
-    return NULL;
+    return victim;
 }
 
 /* palloc() and get frame. If there is no available page, evict the page
@@ -100,12 +113,31 @@ static struct frame *vm_evict_frame(void) {
  * memory is full, this function evicts the frame to get the available memory
  * space.*/
 static struct frame *vm_get_frame(void) {
-    struct frame *frame = NULL;
     /* TODO: Fill this function. */
+    struct frame *frame = NULL;
+    uint8_t *kpage;
+    
+    kpage = palloc_get_page(PAL_USER);
+    
+    if (kpage != NULL) {
+        frame = (struct frame *)malloc(sizeof(struct frame));
+        if (frame == NULL) {
+            palloc_free_page(kpage);  // 메모리 누수 방지
+            PANIC("Failed to allocate frame struct");
+        }
+        frame->kva = kpage;
+        frame->page = NULL;
+        
+        list_push_back(&frame_table, &frame->frame_elem);
 
-    ASSERT(frame != NULL);
-    ASSERT(frame->page == NULL);
-    return frame;
+        return frame;
+    } else {
+        frame = vm_evict_frame();
+        if (frame == NULL) {
+            PANIC("todo");
+        }
+        return frame;
+    }
 }
 
 /* Growing the stack. */

@@ -34,6 +34,7 @@ enum vm_type {
 
 struct page_operations;
 struct thread;
+struct list frame_table;
 
 #define VM_TYPE(type) ((type) & 7)
 
@@ -64,6 +65,7 @@ struct page {
 struct frame {
     void *kva;
     struct page *page;
+    struct list_elem frame_elem;
 };
 
 /* The function table for page operations.
