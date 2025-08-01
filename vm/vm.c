@@ -57,19 +57,32 @@ err:
     return false;
 }
 
-/* Find VA from spt and return page. On error, return NULL. */
-struct page *spt_find_page(struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
-    struct page *page = NULL;
+/// @brief SPT에서 가상 주소 va에 해당하는 struct page *를 찾습니다.
+struct page *spt_find_page(struct supplemental_page_table *spt, void *va) {
+    struct page temp_page;
     /* TODO: Fill this function. */
+    temp_page.va = pg_round_down(va);
 
-    return page;
+
+    struct hash_elem *found_element = hash_find(&spt->spt_hash, &temp_page.hash_elem);
+
+    if (found_element != NULL)
+        return hash_entry(found_element, struct page, hash_elem);
+    else
+        return NULL;
 }
 
-/* Insert PAGE into spt with validation. */
-bool spt_insert_page(struct supplemental_page_table *spt UNUSED, struct page *page UNUSED) {
+/// @brief page->va를 기준으로 SPT에 페이지 등록, 중복 시 false
+/// @param spt (페이지를 등록할 보조 페이지 테이블의 포인터)
+/// @param page (등록할 페이지의 정보가 담긴 구조체의 포인터)
+/// @return 삽입에 성공하면 true, 가상 주소가 중복되어 실패하면 false
+bool spt_insert_page(struct supplemental_page_table *spt , struct page *page ) {
     int succ = false;
-    /* TODO: Fill this function. */
-
+    struct hash_elem *result = hash_insert(&spt->spt_hash, &page->hash_elem);
+    
+    if(result == NULL){
+        succ = true;
+    }
     return succ;
 }
 
