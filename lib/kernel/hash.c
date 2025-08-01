@@ -225,6 +225,11 @@ bool hash_empty(struct hash *h) {
 #define FNV_64_BASIS 0xcbf29ce484222325UL
 
 /* Returns a hash of the SIZE bytes in BUF. */
+
+/// @brief 주어진 바이트 배열에 대해 Fowler-Noll-Vo (FNV-1a) 64비트 해시 값을 계산하는 함수
+/// @param buf_ 해시할 데이터가 저장된 버퍼의 시작 주소 (NULL이 아니어야 함)
+/// @param size 해시할 데이터의 바이트 수
+/// @return 계산된 64비트 해시 값
 uint64_t hash_bytes(const void *buf_, size_t size) {
     /* Fowler-Noll-Vo 32-bit hash, for bytes. */
     const unsigned char *buf = buf_;
