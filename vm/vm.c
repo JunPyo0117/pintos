@@ -16,6 +16,7 @@ void vm_init(void) {
     register_inspect_intr();
     /* DO NOT MODIFY UPPER LINES. */
     /* TODO: Your code goes here. */
+    list_init(&frame_table);
 }
 
 /* Get the type of the page. This function is useful if you want to know the
@@ -92,33 +93,84 @@ void spt_remove_page(struct supplemental_page_table *spt, struct page *page) {
 }
 
 /* Get the struct frame, that will be evicted. */
+/**
+ * @brief 페이지 교체를 위한 희생자(victim) 프레임을 선택
+ * @details 이 함수는 페이지 교체 정책에 따라 희생자 프레임을 결정
+ * 현재 구현은 FIFO(First-In, First-Out) 알고리즘을 사용하며,
+ * 전역 프레임 테이블(frame_table)에서 가장 먼저 들어온 프레임을 희생자로 선택
+ * @return 희생자로 선택된 프레임에 대한 포인터를 반환
+ * 만약 프레임 테이블이 비어있다면 NULL을 반환
+ */
 static struct frame *vm_get_victim(void) {
     struct frame *victim = NULL;
     /* TODO: The policy for eviction is up to you. */
 
+    if (list_empty(&frame_table)) {
+        return NULL;
+    }
+    
+    // FIFO 정책: 가장 오래된 프레임을 victim으로 선택
+    struct list_elem *e = list_pop_front(&frame_table);
+
+    victim = list_entry(e, struct frame, frame_elem);
+    
     return victim;
 }
 
 /* Evict one page and return the corresponding frame.
  * Return NULL on error.*/
+/**
+ * @brief 하나의 페이지를 교체(evict)하고, 해당 프레임을 반환
+ * @details 이 함수는 페이지 교체 알고리즘(예: FIFO 또는 Clock)을 사용하여 희생자(victim) 프레임을 선택
+ * 그런 다음, 희생자 페이지의 내용을 스왑 공간으로 내보냄
+ * 이 함수는 교체된 후 비워진 프레임 구조체의 포인터를 반환
+ * @return 교체되어 재사용 가능한 프레임에 대한 포인터. 오류 발생 시 NULL을 반환할 수 있음
+ */
 static struct frame *vm_evict_frame(void) {
-    struct frame *victim UNUSED = vm_get_victim();
+    struct frame *victim = vm_get_victim();
     /* TODO: swap out the victim and return the evicted frame. */
+    swap_out(victim->page);
 
-    return NULL;
+    return victim;
 }
 
 /* palloc() and get frame. If there is no available page, evict the page
  * and return it. This always return valid address. That is, if the user pool
  * memory is full, this function evicts the frame to get the available memory
  * space.*/
+/**
+ * @brief 사용자 풀에서 프레임을 할당하거나, 메모리가 부족할 경우 페이지를 교체하여 프레임을 가져옴
+ * @details 이 함수는 먼저 사용자 풀에서 새로운 물리 페이지를 할당하려고 시도
+ * 할당에 성공하면 새로운 프레임 구조체를 할당하고, 이를 물리 페이지에 연결한 후 전역 프레임 테이블에 추가
+ * 만약 사용자 풀이 가득 차 있다면, vm_evict_frame()을 호출하여 기존 페이지를 교체해 사용 가능한 프레임을 확보한 후 반환
+ * @return 유효한 프레임 구조체에 대한 포인터를 반환합니다. 복구 불가능한 오류 발생 시에는 패닉을 호출
+ */
 static struct frame *vm_get_frame(void) {
-    struct frame *frame = NULL;
     /* TODO: Fill this function. */
+    struct frame *frame = NULL;
+    uint8_t *kpage;
+    
+    kpage = palloc_get_page(PAL_USER);
+    
+    if (kpage != NULL) {
+        frame = (struct frame *)malloc(sizeof(struct frame));
+        if (frame == NULL) {
+            palloc_free_page(kpage);  // 메모리 누수 방지
+            PANIC("Failed to allocate frame struct");
+        }
+        frame->kva = kpage;
+        frame->page = NULL;
+        
+        list_push_back(&frame_table, &frame->frame_elem);
 
-    ASSERT(frame != NULL);
-    ASSERT(frame->page == NULL);
-    return frame;
+        return frame;
+    } else {
+        frame = vm_evict_frame();
+        if (frame == NULL) {
+            PANIC("todo");
+        }
+        return frame;
+    }
 }
 
 /* Growing the stack. */
