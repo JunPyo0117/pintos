@@ -1,7 +1,6 @@
 #ifndef VM_VM_H
 #define VM_VM_H
 #include <stdbool.h>
-
 #include "threads/palloc.h"
 
 enum vm_type {

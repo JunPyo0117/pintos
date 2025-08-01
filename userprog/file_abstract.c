@@ -109,26 +109,32 @@ off_t tell_file(struct File* file) {
 int close_file(struct File* file) {
     ASSERT(file != NULL);
     ASSERT(file->dup > 0);
+    lock_acquire(&file_lock);
     if (--file->dup == 0) {
         switch (file->type) {
             case FILE:
                 file_close(file->file_ptr);
                 free(file);
+                lock_release(&file_lock);
                 return 0;
 
             case STDIN:
                 free(file);
+                lock_release(&file_lock);
                 return 0;
 
             case STDOUT:
                 free(file);
+                lock_release(&file_lock);
                 return 0;
 
             default:
                 free(file);
+                lock_release(&file_lock);
                 return -1;
         }
     }
+    lock_release(&file_lock);
     return file->dup;
 }
 

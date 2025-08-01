@@ -154,7 +154,22 @@ static bool vm_do_claim_page(struct page *page) {
 }
 
 /* Initialize new supplemental page table */
-void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {}
+void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
+    hash_init(spt, page_hash, page_less, NULL);
+    // 1. 해쉬 테이블 초기화하기
+    // 2. hash_init의 page_hash 만들기
+    // 3. hash_init의 page_less 만들기
+}
+
+uint64_t page_hash(const struct hash_elem *e, void *aux) {
+
+    return;
+}
+
+bool page_less(const struct hash_elem *a, const struct hash_elem *b, void *aux) {
+
+    return;
+}
 
 /* Copy supplemental page table from src to dst */
 bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED,
