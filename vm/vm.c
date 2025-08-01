@@ -133,9 +133,16 @@ void vm_dealloc_page(struct page *page) {
 }
 
 /* Claim the page that allocate on VA. */
+
+/// @brief 주어진 가상 주소에 해당하는 페이지를 프레임에 매핑하는 함수
+/// @param va 접근하려는 가상 주소
+/// @return 페이지를 성공적으로 매핑했다면 true, 실패했다면 false
 bool vm_claim_page(void *va UNUSED) {
-    struct page *page = NULL;
     /* TODO: Fill this function */
+    struct page *page = spt_find_page(&thread_current()->spt, va);
+
+    if (page == NULL)
+        return false;
 
     return vm_do_claim_page(page);
 }
