@@ -133,9 +133,16 @@ void vm_dealloc_page(struct page *page) {
 }
 
 /* Claim the page that allocate on VA. */
+
+/// @brief 주어진 가상 주소에 해당하는 페이지를 프레임에 매핑하는 함수
+/// @param va 접근하려는 가상 주소
+/// @return 페이지를 성공적으로 매핑했다면 true, 실패했다면 false
 bool vm_claim_page(void *va UNUSED) {
-    struct page *page = NULL;
     /* TODO: Fill this function */
+    struct page *page = spt_find_page(&thread_current()->spt, va);
+
+    if (page == NULL)
+        return false;
 
     return vm_do_claim_page(page);
 }
@@ -154,21 +161,28 @@ static bool vm_do_claim_page(struct page *page) {
 }
 
 /* Initialize new supplemental page table */
+
+/// @brief 보조 페이지 테이블을 초기화하는 함수
+/// @param spt 초기화할 보조 페이지 테이블 구조체 포인터
 void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
     hash_init(spt, page_hash, page_less, NULL);
-    // 1. 해쉬 테이블 초기화하기
-    // 2. hash_init의 page_hash 만들기
-    // 3. hash_init의 page_less 만들기
 }
 
+/// @brief 페이지 구조체의 va를 기반으로 해시를 생성하는 함수
+/// @param e 해시 테이블 내의 hash_elem 포인터
+/// @return 페이지의 가상 주소를 해시한 64비트 해시 값
 uint64_t page_hash(const struct hash_elem *e, void *aux) {
-
-    return;
+    struct page *page = hash_entry(e, struct page, hash_elem);
+    return hash_bytes(page->va, sizeof *page->va);
 }
 
+/// @brief 페이지를 가상 주소 기준으로 비교하는 함수
+/// @param a 비교하는 해시 요소 1
+/// @param b 비교하는 해시 요소 2
+/// @return a의 가상 주소가 작다면 true, b의 가상 주소가 작다면 false
 bool page_less(const struct hash_elem *a, const struct hash_elem *b, void *aux) {
-
-    return;
+    return hash_entry(a, struct page, hash_elem)->va 
+            < hash_entry(b, struct page, hash_elem)->va;
 }
 
 /* Copy supplemental page table from src to dst */
