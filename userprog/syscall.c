@@ -165,7 +165,7 @@ static pid_t fork_handler(const char *thread_name, struct intr_frame *f) {
 
 /* 사용자 프로그램 실행 */
 static int exec_handler(const char *file) {
-    if (is_user_accesable(file, 0, P_USER)) {
+    if (is_user_accesable(file, 0, P_USER | IS_STR)) {
         char *fn_copy = palloc_get_page(0);
         if (fn_copy) {
             strlcpy(fn_copy, file, PGSIZE);
@@ -207,7 +207,11 @@ static int open_handler(const char *file_name) {
         if (file == NULL) {
             return -1;
         }
-        return set_fd(file);
+        int result = set_fd(file);
+        if(result == -1){
+            close_file(file);
+        }
+        return result;
     }
     exit_handler(-1);
 }

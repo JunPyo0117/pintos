@@ -155,6 +155,7 @@ tid_t process_fork(const char *name, struct intr_frame *if_) {
     }
     struct thread *t = list_entry(list_back(&curr->childs), struct thread, sibling_elem);
     if (t->exit_status == -1) {
+        sema_down(&t->wait_sema);
         return -1;
     }
     return tid;
@@ -231,20 +232,20 @@ static bool duplicate_pte(uint64_t *pte, void *va, void *aux) {
  * @see process_fork()
  */
 static void __do_fork(void *aux) {
-    struct intr_frame if_;
+    struct intr_frame *if_;
     struct fork_data *fork_data = (struct fork_data *)aux;
     struct thread *parent = fork_data->parent;
     struct thread *current = thread_current();
+    if_ = &current->tf;
     /* TODO: somehow pass the parent_if. (i.e. process_fork()'s if_) */
     struct intr_frame *parent_if = fork_data->parent_if;
-    bool succ = true;
 
     /* 부모-자식 관계 설정 */
     current->parent = parent;
     list_push_back(&parent->childs, &current->sibling_elem);
 
     /* 1. Read the cpu context to local stack. */
-    memcpy(&if_, parent_if, sizeof(struct intr_frame));
+    memcpy(if_, parent_if, sizeof(struct intr_frame));
 
     /* 2. Duplicate PT */
     current->pml4 = pml4_create();
@@ -276,13 +277,11 @@ static void __do_fork(void *aux) {
     process_init();
 
     free(fork_data);
-    if_.R.rax = 0;  // 자식 rax 초기화
+    if_->R.rax = 0;  // 자식 rax 초기화
 
     /* Finally, switch to the newly created process. */
-    if (succ) {
-        sema_up(&(current->parent->fork_sema));
-        do_iret(&if_);
-    }
+    sema_up(&(current->parent->fork_sema));
+    do_iret(if_);
 error:
     free(fork_data);
     current->exit_status = -1;
