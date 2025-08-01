@@ -160,16 +160,26 @@ bool vm_claim_page(void *va UNUSED) {
     return vm_do_claim_page(page);
 }
 
-/* Claim the PAGE and set up the mmu. */
+/// @brief claim_page()의 실제 로직을 수행합니다. 프레임을 할당하고, frame->page 및 page->frame 연결 등을 수행.
+/// @param page 매핑 및 할당할 보조 페이지 테이블의 페이지 구조체 포인터
+/// @return 성공 시 true, 프레임 할당 실패 또는 페이지 테이블 등록 실패 시 false
 static bool vm_do_claim_page(struct page *page) {
     struct frame *frame = vm_get_frame();
+    if (frame == NULL)
+        return false;
 
-    /* Set links */
+    /* 1. 가상 페이지 ↔ 프레임 연결 */
     frame->page = page;
     page->frame = frame;
 
-    /* TODO: Insert page table entry to map page's VA to frame's PA. */
+    /* 2. 가상 주소 ↔ 물리 주소(PA) 매핑 */
+    if (!pml4_set_page(thread_current()->pml4, page->va, frame->kva, page->writable)) {
+        /* 페이지 테이블 등록 실패 시 프레임 반납 */
+        vm_dealloc_frame(frame);
+        return false;
+    }
 
+    /* 3. 스왑인: 파일 읽기, 제로 페이지 채우기, 디스크에서 가져오기 등 */
     return swap_in(page, frame->kva);
 }
 
