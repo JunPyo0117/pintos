@@ -966,15 +966,35 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage, uint32_t 
     return true;
 }
 
+/**
+ * @brief 사용자 프로세스를 위한 초기 스택을 설정
+ * 
+ * 이 함수는 사용자 공간의 최상단에서 한 페이지 크기만큼 아래에 
+ * 스택 페이지를 할당하고 매핑. 
+ * 성공적으로 설정되면 인터럽트 프레임의 스택 포인터를 적절히 초기화
+ * 
+ * @param if_ 초기화할 인터럽트 프레임 포인터
+ * @return true 스택 설정이 성공한 경우
+ * @return false 스택 설정이 실패한 경우 (메모리 할당 실패 등)
+ * 
+ * @note 실패 시 할당된 리소스는 자동으로 정리
+ * @see vm_alloc_page(), vm_claim_page(), vm_dealloc_page()
+ */
 /* Create a PAGE of stack at the USER_STACK. Return true on success. */
 static bool setup_stack(struct intr_frame *if_) {
     bool success = false;
     void *stack_bottom = (void *)(((uint8_t *)USER_STACK) - PGSIZE);
 
-    /* TODO: Map the stack on stack_bottom and claim the page immediately.
-     * TODO: If success, set the rsp accordingly.
-     * TODO: You should mark the page is stack. */
-    /* TODO: Your code goes here */
+    success = vm_alloc_page(VM_ANON, stack_bottom, true);
+
+    if (success) {
+        success = vm_claim_page(stack_bottom);
+        if (success) {
+            if_->rsp = USER_STACK;
+        } else {
+            vm_dealloc_page(stack_bottom);
+        }
+    }
 
     return success;
 }

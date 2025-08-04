@@ -10,6 +10,9 @@
 #include "vm/uninit.h"
 #include "threads/vaddr.h"
 
+/* Global frame table */
+struct list frame_table;
+
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
 void vm_init(void) {
@@ -296,13 +299,24 @@ void vm_dealloc_page(struct page *page) {
     free(page);
 }
 
+void vm_dealloc_frame(struct frame *frame) {
+    if (frame == NULL) {
+        return;
+    }
+
+    palloc_free_page(frame);
+    list_remove(&frame->frame_elem);
+    frame->page = NULL;
+    free(frame);
+}
+
 /* Claim the page that allocate on VA. */
 /*
 * @brief 주어진 가상 주소에 해당하는 페이지를 프레임에 매핑하는 함수
 * @param va 접근하려는 가상 주소
 * @return 페이지를 성공적으로 매핑했다면 true, 실패했다면 false
 */
-bool vm_claim_page(void *va UNUSED) {
+bool vm_claim_page(void *va) {
     /* TODO: Fill this function */
     struct page *page = spt_find_page(&thread_current()->spt, va);
 
