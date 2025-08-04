@@ -11,7 +11,6 @@ static bool anon_swap_in(struct page *page, void *kva);
 static bool anon_swap_out(struct page *page);
 static void anon_destroy(struct page *page);
 
-struct disk *swap_disk;
 struct bitmap *swap_table;
 // static struct lock swap_lock;
 

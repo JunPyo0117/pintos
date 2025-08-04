@@ -8,6 +8,10 @@
 #include "vm/anon.h"
 #include "vm/file.h"
 #include "vm/uninit.h"
+#include "threads/vaddr.h"
+
+/* Global frame table */
+struct list frame_table;
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -246,6 +250,17 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool us
 void vm_dealloc_page(struct page *page) {
     destroy(page);
     free(page);
+}
+
+void vm_dealloc_frame(struct frame *frame) {
+    if (frame == NULL) {
+        return;
+    }
+
+    palloc_free_page(frame);
+    list_remove(&frame->frame_elem);
+    frame->page = NULL;
+    free(frame);
 }
 
 /* Claim the page that allocate on VA. */
