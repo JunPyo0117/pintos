@@ -5,6 +5,10 @@
 #include "threads/malloc.h"
 #include "vm/inspect.h"
 
+#include "vm/anon.h"
+#include "vm/file.h"
+#include "vm/uninit.h"
+
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
 void vm_init(void) {
@@ -40,6 +44,22 @@ static struct frame *vm_evict_frame(void);
 /* Create the pending page object with initializer. If you want to create a
  * page, do not create it directly and make it through this function or
  * `vm_alloc_page`. */
+
+/**
+ * @brief 가상 주소 upage에 초기화 가능한 페이지를 할당하는 함수
+ * 
+ * @details 주어진 가상 주소(upage)가 이미 SPT에 등록되어 있지 않은 경우, 
+ *          VM 타입에 따라 적절한 초기화자(initializer)를 선택하고 uninit 페이지를 생성
+ *          이후 SPT에 페이지를 등록
+ * 
+ * @param type 페이지의 타입 (ex. VM_ANON, VM_FILE)
+ * @param upage 유저 가상 주소 (페이지 단위)
+ * @param writable 해당 페이지가 사용자에 의해 쓰기 가능한지 여부
+ * @param init 실제 데이터 로딩을 수행할 사용자 정의 초기화 함수
+ * @param aux 초기화 함수에 전달할 보조 데이터
+ * 
+ * @return 성공 시 true, 실패 시 false
+ */
 bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writable,
                                     vm_initializer *init, void *aux) {
     ASSERT(VM_TYPE(type) != VM_UNINIT)
@@ -48,11 +68,38 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writabl
 
     /* Check wheter the upage is already occupied or not. */
     if (spt_find_page(spt, upage) == NULL) {
-        /* TODO: Create the page, fetch the initialier according to the VM type,
-         * TODO: and then create "uninit" page struct by calling uninit_new. You
-         * TODO: should modify the field after calling the uninit_new. */
+        // TODO: Create the page, fetch the initialier according to the VM type,
+        struct page *page = (struct page *) malloc(sizeof(struct page));
+        
+        if (page == NULL)
+            goto err;
+        
+        vm_initializer *page_initailizer = NULL;
 
-        /* TODO: Insert the page into the spt. */
+        switch (VM_TYPE(type)) {
+            case VM_ANON:
+                page_initailizer = anon_initializer;
+                break;
+            case VM_FILE:
+                page_initailizer = file_backed_initializer;
+                break;  
+            default:
+                free(page);
+                goto err;
+        }
+
+        // TODO: and then create "uninit" page struct by calling uninit_new. You
+        // TODO: should modify the field after calling the uninit_new.
+        uninit_new(page, upage, init, type, aux, page_initailizer);
+        page->writable = writable;
+        
+        // TODO: Insert the page into the spt.
+        if (!spt_insert_page(spt, page)) {
+            free(page);
+            goto err;
+        }
+
+        return true;
     }
 err:
     return false;
