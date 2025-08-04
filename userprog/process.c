@@ -736,6 +736,16 @@ static bool setup_stack(struct intr_frame *if_) {
     return success;
 }
 
+
+
+#else
+
+static bool install_page(void *upage, void *kpage, bool writable);
+
+/* From here, codes will be used after project 3.
+ * If you want to implement the function for only project 2, implement it on the
+ * upper block. */
+
 /* Adds a mapping from user virtual address UPAGE to kernel
  * virtual address KPAGE to the page table.
  * If WRITABLE is true, the user process may modify the page;
@@ -847,11 +857,6 @@ static uint64_t *pop_stack(size_t size, struct intr_frame *if_) {
 
     return if_->rsp;
 }
-
-#else
-/* From here, codes will be used after project 3.
- * If you want to implement the function for only project 2, implement it on the
- * upper block. */
 
 /**
  * @brief 페이지 폴트 발생 시 실제로 세그먼트를 디스크에서 로드하는 함수
