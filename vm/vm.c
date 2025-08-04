@@ -8,6 +8,9 @@
 #include "vm/anon.h"
 #include "vm/file.h"
 #include "vm/uninit.h"
+#include "lib/kernel/hash.h"
+#include "lib/string.h"
+#include "include/threads/vaddr.h"
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -319,21 +322,60 @@ bool page_less(const struct hash_elem *a, const struct hash_elem *b, void *aux) 
 
 /* Copy supplemental page table from src to dst */
 /**
- * @brief 진행 중
- * @param dst 부모 프로세스의 SPT 포인터
- * @param src 자식 프로세스의 SPT 포인터
- * @return 
+ * @brief 복사본 supplemental_page_table(dst)에 src의 내용을 복사하는 함수
+ * 
+ * @details src의 각 페이지를 순회하면서 dst에 같은 가상 주소로 페이지를 할당하고,
+ *          페이지 유형에 따라 적절히 초기화 또는 내용을 복사
+ *          복사 중 실패가 발생하면 dst를 모두 정리하고 false를 반환
+ * 
+ * @param dst 복사 대상 supplemental_page_table 포인터
+ * @param src 복사 원본 supplemental_page_table 포인터
+ * @return 성공 시 true, 실패 시 false
+ * 
  */
-bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED,
-                                  struct supplemental_page_table *src UNUSED) {
+bool supplemental_page_table_copy(struct supplemental_page_table *dst, struct supplemental_page_table *src) {
     struct hash_iterator i;
     hash_first(&i, &src->spt_hash);
 
-    while (hash_next(&i))
+    while (hash_next(&i)) 
     {
         struct page *parent_page = hash_entry(hash_cur(&i) ,struct page, hash_elem);
+        enum vm_type parent_type = page_get_type(parent_page);
+
+        if (parent_type == VM_UNINIT) 
+        {
+            if (!vm_alloc_page_with_initializer(parent_page->uninit.type,                 
+                                                parent_page->va,                 
+                                                parent_page->writable,                 
+                                                parent_page->uninit.init, 
+                                                parent_page->uninit.aux)) 
+                goto err;
+        }
+        else 
+        {
+            if (!vm_alloc_page(parent_type, parent_page->va, parent_page->writable))
+                goto err;
+
+            struct page *child_page = spt_find_page(dst, parent_page->va);
+
+            if (child_page == NULL)
+                goto err;   
+            
+            if (!vm_claim_page(child_page->va))
+                goto err;
+            
+            if (child_page->frame == NULL || parent_page->frame == NULL)
+                goto err;
+            
+            memcpy(child_page->frame->kva, parent_page->frame->kva, PGSIZE);
+        }
     }
-    
+
+    return true;
+
+err:
+    supplemental_page_table_kill(dst);
+    return false;
 }
 
 /* Free the resource hold by the supplemental page table */
