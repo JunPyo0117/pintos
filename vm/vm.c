@@ -213,9 +213,10 @@ static struct frame *vm_get_frame(void) {
         return frame;
     } else {
         frame = vm_evict_frame();
-        if (frame == NULL) {
-            PANIC("todo");
+        if (frame == NULL) { 
+            PANIC("vm_evict_frame returned NULL");
         }
+
         return frame;
     }
 }
