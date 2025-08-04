@@ -254,7 +254,7 @@ void vm_dealloc_page(struct page *page) {
 * @param va 접근하려는 가상 주소
 * @return 페이지를 성공적으로 매핑했다면 true, 실패했다면 false
 */
-bool vm_claim_page(void *va UNUSED) {
+bool vm_claim_page(void *va) {
     /* TODO: Fill this function */
     struct page *page = spt_find_page(&thread_current()->spt, va);
 
