@@ -8,6 +8,7 @@
 #include "vm/anon.h"
 #include "vm/file.h"
 #include "vm/uninit.h"
+#include "threads/vaddr.h"
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -225,18 +226,65 @@ static struct frame *vm_get_frame(void) {
 }
 
 /* Growing the stack. */
-static void vm_stack_growth(void *addr UNUSED) {}
+/**
+ * @brief 스택을 한 페이지 확장합니다.
+ * @details 반환 타입을 void에서 bool로 수정하여 성공/실패 여부를 알립니다.
+ * @return 스택 확장에 성공하면 true, 실패하면 false를 반환합니다.
+ */
+
+static bool vm_stack_growth(void *addr) {
+    void *page_fault_addr = pg_round_down(addr);
+
+    if(!vm_alloc_page(VM_ANON, page_fault_addr, true)){
+        return false;
+    }
+
+    bool success = vm_claim_page(page_fault_addr);
+    if(!success){
+        return false;
+    }
+
+    return true;
+}
 
 /* Handle the fault on write_protected page */
 static bool vm_handle_wp(struct page *page UNUSED) {}
 
 /* Return true on success */
+/**
+ * @brief 페이지 폴트를 처리하려고 시도하는 메인 함수.
+ * @details 폴트의 유효성을 검사하고, 해결 가능한 경우 vm_do_claim_page를 호출합니다.
+ * @param f 인터럽트 프레임
+ * @param addr 폴트가 발생한 가상 주소
+ * @param user 유저 모드에서 발생했는지 여부
+ * @param write 쓰기 시도 중 발생했는지 여부
+ * @param not_present 페이지가 메모리에 없어 발생했는지 여부
+ * @return 폴트 처리에 성공하면 true, 실패하면 false
+ */
 bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool user UNUSED,
                          bool write UNUSED, bool not_present UNUSED) {
     struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
     struct page *page = NULL;
-    /* TODO: Validate the fault */
-    /* TODO: Your code goes here */
+
+    if(!not_present || addr == NULL || is_kernel_vaddr(addr)){
+        return false;
+    }
+
+    page = spt_find_page(spt, addr);
+    if(page == NULL){
+        
+        void *rsp = user ? f->rsp : thread_current()->rsp_stack;
+        if((rsp - 8 <= addr) && (USER_STACK - (1 << 20) < addr) && (addr < USER_STACK)){
+            return vm_stack_growth(addr);
+        }
+
+        return false;
+    }
+    
+    
+    if(write && !page->writable){
+        return false;
+    }
 
     return vm_do_claim_page(page);
 }
