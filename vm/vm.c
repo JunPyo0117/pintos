@@ -264,9 +264,9 @@ static bool vm_handle_wp(struct page *page UNUSED) {}
  * @param not_present 페이지가 메모리에 없어 발생했는지 여부
  * @return 폴트 처리에 성공하면 true, 실패하면 false
  */
-bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool user UNUSED,
-                         bool write UNUSED, bool not_present UNUSED) {
-    struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
+bool vm_try_handle_fault(struct intr_frame *f, void *addr, bool user,
+                         bool write, bool not_present) {
+    struct supplemental_page_table *spt = &thread_current()->spt;
     struct page *page = NULL;
 
     if(!not_present || addr == NULL || is_kernel_vaddr(addr)){
@@ -356,7 +356,7 @@ static bool vm_do_claim_page(struct page *page) {
 * @brief 보조 페이지 테이블을 초기화하는 함수
 * @param spt 초기화할 보조 페이지 테이블 구조체 포인터
 */
-void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
+void supplemental_page_table_init(struct supplemental_page_table *spt) {
     hash_init(spt, page_hash, page_less, NULL);
 }
 
@@ -386,8 +386,8 @@ bool page_less(const struct hash_elem *a, const struct hash_elem *b, void *aux) 
  * @param src 자식 프로세스의 SPT 포인터
  * @return 
  */
-bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED,
-                                  struct supplemental_page_table *src UNUSED) {
+bool supplemental_page_table_copy(struct supplemental_page_table *dst,
+                                  struct supplemental_page_table *src) {
     struct hash_iterator i;
     hash_first(&i, &src->spt_hash);
 
@@ -408,7 +408,7 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED,
  * 
  * @param spt 제거할 보조 페이지 테이블 포인터
  */
-void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED) {
+void supplemental_page_table_kill(struct supplemental_page_table *spt) {
     /* TODO: Destroy all the supplemental_page_table hold by thread and
      * TODO: writeback all the modified contents to the storage. */
     hash_destroy(&spt->spt_hash, page_destory);
