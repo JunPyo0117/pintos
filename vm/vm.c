@@ -105,7 +105,9 @@ err:
     return false;
 }
 
-/// @brief SPT에서 가상 주소 va에 해당하는 struct page *를 찾습니다.
+/*
+* @brief SPT에서 가상 주소 va에 해당하는 struct page *를 찾습니다.
+*/
 struct page *spt_find_page(struct supplemental_page_table *spt, void *va) {
     struct page temp_page;
     /* TODO: Fill this function. */
@@ -119,11 +121,12 @@ struct page *spt_find_page(struct supplemental_page_table *spt, void *va) {
     else
         return NULL;
 }
-
-/// @brief page->va를 기준으로 SPT에 페이지 등록, 중복 시 false
-/// @param spt (페이지를 등록할 보조 페이지 테이블의 포인터)
-/// @param page (등록할 페이지의 정보가 담긴 구조체의 포인터)
-/// @return 삽입에 성공하면 true, 가상 주소가 중복되어 실패하면 false
+/*
+* @brief page->va를 기준으로 SPT에 페이지 등록, 중복 시 false
+* @param spt (페이지를 등록할 보조 페이지 테이블의 포인터)
+* @param page (등록할 페이지의 정보가 담긴 구조체의 포인터)
+* @return 삽입에 성공하면 true, 가상 주소가 중복되어 실패하면 false
+*/
 bool spt_insert_page(struct supplemental_page_table *spt , struct page *page ) {
     int succ = false;
     struct hash_elem *result = hash_insert(&spt->spt_hash, &page->hash_elem);
@@ -246,10 +249,11 @@ void vm_dealloc_page(struct page *page) {
 }
 
 /* Claim the page that allocate on VA. */
-
-/// @brief 주어진 가상 주소에 해당하는 페이지를 프레임에 매핑하는 함수
-/// @param va 접근하려는 가상 주소
-/// @return 페이지를 성공적으로 매핑했다면 true, 실패했다면 false
+/*
+* @brief 주어진 가상 주소에 해당하는 페이지를 프레임에 매핑하는 함수
+* @param va 접근하려는 가상 주소
+* @return 페이지를 성공적으로 매핑했다면 true, 실패했다면 false
+*/
 bool vm_claim_page(void *va UNUSED) {
     /* TODO: Fill this function */
     struct page *page = spt_find_page(&thread_current()->spt, va);
@@ -260,9 +264,11 @@ bool vm_claim_page(void *va UNUSED) {
     return vm_do_claim_page(page);
 }
 
-/// @brief claim_page()의 실제 로직을 수행합니다. 프레임을 할당하고, frame->page 및 page->frame 연결 등을 수행.
-/// @param page 매핑 및 할당할 보조 페이지 테이블의 페이지 구조체 포인터
-/// @return 성공 시 true, 프레임 할당 실패 또는 페이지 테이블 등록 실패 시 false
+/*
+* @brief claim_page()의 실제 로직을 수행합니다. 프레임을 할당하고, frame->page 및 page->frame 연결 등을 수행.
+* @param page 매핑 및 할당할 보조 페이지 테이블의 페이지 구조체 포인터
+* @return 성공 시 true, 프레임 할당 실패 또는 페이지 테이블 등록 실패 시 false
+*/
 static bool vm_do_claim_page(struct page *page) {
     struct frame *frame = vm_get_frame();
     if (frame == NULL)
@@ -284,9 +290,10 @@ static bool vm_do_claim_page(struct page *page) {
 }
 
 /* Initialize new supplemental page table */
-
-/// @brief 보조 페이지 테이블을 초기화하는 함수
-/// @param spt 초기화할 보조 페이지 테이블 구조체 포인터
+/*
+* @brief 보조 페이지 테이블을 초기화하는 함수
+* @param spt 초기화할 보조 페이지 테이블 구조체 포인터
+*/
 void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
     hash_init(spt, page_hash, page_less, NULL);
 }
@@ -299,10 +306,12 @@ uint64_t page_hash(const struct hash_elem *e, void *aux) {
     return hash_bytes(page->va, sizeof *page->va);
 }
 
-/// @brief 페이지를 가상 주소 기준으로 비교하는 함수
-/// @param a 비교하는 해시 요소 1
-/// @param b 비교하는 해시 요소 2
-/// @return a의 가상 주소가 작다면 true, b의 가상 주소가 작다면 false
+/*
+* @brief 페이지를 가상 주소 기준으로 비교하는 함수
+* @param a 비교하는 해시 요소 1
+* @param b 비교하는 해시 요소 2
+* @return a의 가상 주소가 작다면 true, b의 가상 주소가 작다면 false
+*/
 bool page_less(const struct hash_elem *a, const struct hash_elem *b, void *aux) {
     return hash_entry(a, struct page, hash_elem)->va 
             < hash_entry(b, struct page, hash_elem)->va;
