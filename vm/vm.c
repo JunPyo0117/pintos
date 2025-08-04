@@ -308,11 +308,50 @@ bool page_less(const struct hash_elem *a, const struct hash_elem *b, void *aux) 
 }
 
 /* Copy supplemental page table from src to dst */
+/**
+ * @brief 진행 중
+ * @param dst 부모 프로세스의 SPT 포인터
+ * @param src 자식 프로세스의 SPT 포인터
+ * @return 
+ */
 bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED,
-                                  struct supplemental_page_table *src UNUSED) {}
+                                  struct supplemental_page_table *src UNUSED) {
+    struct hash_iterator i;
+    hash_first(&i, &src->spt_hash);
+
+    while (hash_next(&i))
+    {
+        struct page *parent_page = hash_entry(hash_cur(&i) ,struct page, hash_elem);
+    }
+    
+}
 
 /* Free the resource hold by the supplemental page table */
+/**
+ * @brief SPT의 모든 페이지를 제거하는 함수
+ *          필요한 경우 디스크에 반영
+ * 
+ * @details page_destory를 통해 각 페이지에 대해 정리 및 메모리 해제를 수행
+ *          파일 기반 페이지의 경우 수정된 내용이 있다면 디스크에 기록
+ * 
+ * @param spt 제거할 보조 페이지 테이블 포인터
+ */
 void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED) {
     /* TODO: Destroy all the supplemental_page_table hold by thread and
      * TODO: writeback all the modified contents to the storage. */
+    hash_destroy(&spt->spt_hash, page_destory);
+}
+
+/**
+ * @brief 해시 테이블 항목 제거 시 호출되는 콜백 함수
+ *
+ * @details 페이지 타입별 destory를 호출하여 필요한 정리를 수행하고,
+ *          페이지 구조체의 메모리 해제
+ * 
+ * @param elem 제거할 페이지의 해시 요소 포인터
+ */
+void page_destory(struct hash_elem *elem) {
+    struct page *page = hash_entry(elem, struct page, hash_elem);
+    destroy(page);
+    free(page);
 }

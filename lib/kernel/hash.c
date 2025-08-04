@@ -73,6 +73,14 @@ void hash_clear(struct hash *h, hash_action_func *destructor) {
    hash_insert(), hash_replace(), or hash_delete(), yields
    undefined behavior, whether done in DESTRUCTOR or
    elsewhere. */
+
+/**
+ * @brief 해시 테이블의 모든 항목을 제거하고 메모리 해제하는 함수
+ * @details destructor가 주어지면 각 항목에 대해 호출되며, 이후 해시 버킷 메모리 해제
+ * 
+ * @param h 제거할 해시 테이블의 포인터
+ * @param destructor 각 요소 제거 시 호출할 콜백 함수 포인터
+ */
 void hash_destroy(struct hash *h, hash_action_func *destructor) {
     if (destructor != NULL)
         hash_clear(h, destructor);
