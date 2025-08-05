@@ -8,9 +8,14 @@
 #include "vm/anon.h"
 #include "vm/file.h"
 #include "vm/uninit.h"
+
 #include "lib/kernel/hash.h"
 #include "lib/string.h"
-#include "include/threads/vaddr.h"
+#include "threads/vaddr.h"
+
+/* Global frame table */
+struct list frame_table;
+
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -113,6 +118,7 @@ err:
 */
 struct page *spt_find_page(struct supplemental_page_table *spt, void *va) {
     struct page temp_page;
+    memset(&temp_page, 0, sizeof(struct page));
     /* TODO: Fill this function. */
     temp_page.va = pg_round_down(va);
 
@@ -228,18 +234,65 @@ static struct frame *vm_get_frame(void) {
 }
 
 /* Growing the stack. */
-static void vm_stack_growth(void *addr UNUSED) {}
+/**
+ * @brief 스택을 한 페이지 확장합니다.
+ * @details 반환 타입을 void에서 bool로 수정하여 성공/실패 여부를 알립니다.
+ * @return 스택 확장에 성공하면 true, 실패하면 false를 반환합니다.
+ */
+
+static bool vm_stack_growth(void *addr) {
+    void *page_fault_addr = pg_round_down(addr);
+
+    if(!vm_alloc_page(VM_ANON, page_fault_addr, true)){
+        return false;
+    }
+
+    bool success = vm_claim_page(page_fault_addr);
+    if(!success){
+        return false;
+    }
+
+    return true;
+}
 
 /* Handle the fault on write_protected page */
 static bool vm_handle_wp(struct page *page UNUSED) {}
 
 /* Return true on success */
-bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool user UNUSED,
-                         bool write UNUSED, bool not_present UNUSED) {
-    struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
+/**
+ * @brief 페이지 폴트를 처리하려고 시도하는 메인 함수.
+ * @details 폴트의 유효성을 검사하고, 해결 가능한 경우 vm_do_claim_page를 호출합니다.
+ * @param f 인터럽트 프레임
+ * @param addr 폴트가 발생한 가상 주소
+ * @param user 유저 모드에서 발생했는지 여부
+ * @param write 쓰기 시도 중 발생했는지 여부
+ * @param not_present 페이지가 메모리에 없어 발생했는지 여부
+ * @return 폴트 처리에 성공하면 true, 실패하면 false
+ */
+bool vm_try_handle_fault(struct intr_frame *f, void *addr, bool user,
+                         bool write, bool not_present) {
+    struct supplemental_page_table *spt = &thread_current()->spt;
     struct page *page = NULL;
-    /* TODO: Validate the fault */
-    /* TODO: Your code goes here */
+
+    if(!not_present || addr == NULL || is_kernel_vaddr(addr)){
+        return false;
+    }
+
+    page = spt_find_page(spt, addr);
+    if(page == NULL){
+        
+        void *rsp = user ? f->rsp : thread_current()->rsp_stack;
+        if((rsp - 8 <= addr) && (USER_STACK - (1 << 20) < addr) && (addr < USER_STACK)){
+            return vm_stack_growth(addr);
+        }
+
+        return false;
+    }
+    
+    
+    if(write && !page->writable){
+        return false;
+    }
 
     return vm_do_claim_page(page);
 }
@@ -251,13 +304,24 @@ void vm_dealloc_page(struct page *page) {
     free(page);
 }
 
+void vm_dealloc_frame(struct frame *frame) {
+    if (frame == NULL) {
+        return;
+    }
+
+    palloc_free_page(frame);
+    list_remove(&frame->frame_elem);
+    frame->page = NULL;
+    free(frame);
+}
+
 /* Claim the page that allocate on VA. */
 /*
 * @brief 주어진 가상 주소에 해당하는 페이지를 프레임에 매핑하는 함수
 * @param va 접근하려는 가상 주소
 * @return 페이지를 성공적으로 매핑했다면 true, 실패했다면 false
 */
-bool vm_claim_page(void *va UNUSED) {
+bool vm_claim_page(void *va) {
     /* TODO: Fill this function */
     struct page *page = spt_find_page(&thread_current()->spt, va);
 
@@ -297,8 +361,8 @@ static bool vm_do_claim_page(struct page *page) {
 * @brief 보조 페이지 테이블을 초기화하는 함수
 * @param spt 초기화할 보조 페이지 테이블 구조체 포인터
 */
-void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
-    hash_init(spt, page_hash, page_less, NULL);
+void supplemental_page_table_init(struct supplemental_page_table *spt) {
+    hash_init(&spt->spt_hash, page_hash, page_less, NULL);
 }
 
 /// @brief 페이지 구조체의 va를 기반으로 해시를 생성하는 함수
@@ -306,7 +370,7 @@ void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
 /// @return 페이지의 가상 주소를 해시한 64비트 해시 값
 uint64_t page_hash(const struct hash_elem *e, void *aux) {
     struct page *page = hash_entry(e, struct page, hash_elem);
-    return hash_bytes(page->va, sizeof *page->va);
+    return hash_bytes(&page->va, sizeof page->va);  
 }
 
 /*
@@ -388,7 +452,7 @@ err:
  * 
  * @param spt 제거할 보조 페이지 테이블 포인터
  */
-void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED) {
+void supplemental_page_table_kill(struct supplemental_page_table *spt) {
     /* TODO: Destroy all the supplemental_page_table hold by thread and
      * TODO: writeback all the modified contents to the storage. */
     hash_destroy(&spt->spt_hash, page_destory);

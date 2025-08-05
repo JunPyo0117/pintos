@@ -107,6 +107,8 @@ struct thread {
     char name[16];             /* Name (for debugging purposes). */
     int priority;              /* Priority. */
 
+    void *rsp_stack;
+
     //	$feat/timer_sleep
     /** @brief 스레드를 깨울 tick 시각 초기화 시 0*/
     uint64_t wake_tick;
