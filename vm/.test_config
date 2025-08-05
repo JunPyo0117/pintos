@@ -14,6 +14,8 @@ args-single | --fs-disk=10 -p tests/userprog/args-single:args-single --swap-disk
 args-multiple | --fs-disk=10 -p tests/userprog/args-multiple:args-multiple --swap-disk=4 | -q   -f run | 'args-multiple some arguments for you!' | tests/userprog
 args-many | --fs-disk=10 -p tests/userprog/args-many:args-many --swap-disk=4 | -q   -f run | 'args-many a b c d e f g h i j k l m n o p q r s t u v' | tests/userprog
 args-dbl-space | --fs-disk=10 -p tests/userprog/args-dbl-space:args-dbl-space --swap-disk=4 | -q   -f run | 'args-dbl-space two  spaces!' | tests/userprog
+halt | --fs-disk=10 -p tests/userprog/halt:halt --swap-disk=4 | -q   -f run | 'halt' | tests/userprog
+exit | --fs-disk=10 -p tests/userprog/exit:exit --swap-disk=4 | -q   -f run | 'exit' | tests/userprog
 create-normal | --fs-disk=10 -p tests/userprog/create-normal:create-normal --swap-disk=4 | -q   -f run | 'create-normal' | tests/userprog
 create-empty | --fs-disk=10 -p tests/userprog/create-empty:create-empty --swap-disk=4 | -q   -f run | 'create-empty' | tests/userprog
 create-null | --fs-disk=10 -p tests/userprog/create-null:create-null --swap-disk=4 | -q   -f run | 'create-null' | tests/userprog
@@ -133,6 +135,26 @@ sm-seq-random | --fs-disk=10 -p tests/filesys/base/sm-seq-random:sm-seq-random -
 syn-read | --fs-disk=10 -p tests/filesys/base/syn-read:syn-read -p tests/filesys/base/child-syn-read:child-syn-read --swap-disk=4 | -q   -f run | 'syn-read' | tests/filesys/base
 syn-remove | --fs-disk=10 -p tests/filesys/base/syn-remove:syn-remove --swap-disk=4 | -q   -f run | 'syn-remove' | tests/filesys/base
 syn-write | --fs-disk=10 -p tests/filesys/base/syn-write:syn-write -p tests/filesys/base/child-syn-wrt:child-syn-wrt --swap-disk=4 | -q   -f run | 'syn-write' | tests/filesys/base
+
+[threads]
+alarm-single | --fs-disk=10 -p tests/threads/alarm-single:alarm-single -p tests/threads/alarm-single:alarm-single --swap-disk=4 | -q   -f run | 'alarm-single' | tests/threads
+alarm-multiple | --fs-disk=10 -p tests/threads/alarm-multiple:alarm-multiple -p tests/threads/alarm-multiple:alarm-multiple --swap-disk=4 | -q   -f run | 'alarm-multiple' | tests/threads
+alarm-simultaneous | --fs-disk=10 -p tests/threads/alarm-simultaneous:alarm-simultaneous -p tests/threads/alarm-simultaneous:alarm-simultaneous --swap-disk=4 | -q   -f run | 'alarm-simultaneous' | tests/threads
+alarm-priority | --fs-disk=10 -p tests/threads/alarm-priority:alarm-priority -p tests/threads/alarm-priority:alarm-priority --swap-disk=4 | -q   -f run | 'alarm-priority' | tests/threads
+alarm-zero | --fs-disk=10 -p tests/threads/alarm-zero:alarm-zero -p tests/threads/alarm-zero:alarm-zero --swap-disk=4 | -q   -f run | 'alarm-zero' | tests/threads
+alarm-negative | --fs-disk=10 -p tests/threads/alarm-negative:alarm-negative -p tests/threads/alarm-negative:alarm-negative --swap-disk=4 | -q   -f run | 'alarm-negative' | tests/threads
+priority-change | --fs-disk=10 -p tests/threads/priority-change:priority-change -p tests/threads/priority-change:priority-change --swap-disk=4 | -q   -f run | 'priority-change' | tests/threads
+priority-donate-one | --fs-disk=10 -p tests/threads/priority-donate-one:priority-donate-one -p tests/threads/priority-donate-one:priority-donate-one --swap-disk=4 | -q   -f run | 'priority-donate-one' | tests/threads
+priority-donate-multiple | --fs-disk=10 -p tests/threads/priority-donate-multiple:priority-donate-multiple -p tests/threads/priority-donate-multiple:priority-donate-multiple --swap-disk=4 | -q   -f run | 'priority-donate-multiple' | tests/threads
+priority-donate-multiple2 | --fs-disk=10 -p tests/threads/priority-donate-multiple2:priority-donate-multiple2 -p tests/threads/priority-donate-multiple2:priority-donate-multiple2 --swap-disk=4 | -q   -f run | 'priority-donate-multiple2' | tests/threads
+priority-donate-nest | --fs-disk=10 -p tests/threads/priority-donate-nest:priority-donate-nest -p tests/threads/priority-donate-nest:priority-donate-nest --swap-disk=4 | -q   -f run | 'priority-donate-nest' | tests/threads
+priority-donate-sema | --fs-disk=10 -p tests/threads/priority-donate-sema:priority-donate-sema -p tests/threads/priority-donate-sema:priority-donate-sema --swap-disk=4 | -q   -f run | 'priority-donate-sema' | tests/threads
+priority-donate-lower | --fs-disk=10 -p tests/threads/priority-donate-lower:priority-donate-lower -p tests/threads/priority-donate-lower:priority-donate-lower --swap-disk=4 | -q   -f run | 'priority-donate-lower' | tests/threads
+priority-fifo | --fs-disk=10 -p tests/threads/priority-fifo:priority-fifo -p tests/threads/priority-fifo:priority-fifo --swap-disk=4 | -q   -f run | 'priority-fifo' | tests/threads
+priority-preempt | --fs-disk=10 -p tests/threads/priority-preempt:priority-preempt -p tests/threads/priority-preempt:priority-preempt --swap-disk=4 | -q   -f run | 'priority-preempt' | tests/threads
+priority-sema | --fs-disk=10 -p tests/threads/priority-sema:priority-sema -p tests/threads/priority-sema:priority-sema --swap-disk=4 | -q   -f run | 'priority-sema' | tests/threads
+priority-condvar | --fs-disk=10 -p tests/threads/priority-condvar:priority-condvar -p tests/threads/priority-condvar:priority-condvar --swap-disk=4 | -q   -f run | 'priority-condvar' | tests/threads
+priority-donate-chain | --fs-disk=10 -p tests/threads/priority-donate-chain:priority-donate-chain -p tests/threads/priority-donate-chain:priority-donate-chain --swap-disk=4 | -q   -f run | 'priority-donate-chain' | tests/threads
 
 # Total testcases: 115
 # Generated on 2025-08-05
