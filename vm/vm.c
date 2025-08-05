@@ -114,6 +114,7 @@ err:
 */
 struct page *spt_find_page(struct supplemental_page_table *spt, void *va) {
     struct page temp_page;
+    memset(&temp_page, 0, sizeof(struct page));
     /* TODO: Fill this function. */
     temp_page.va = pg_round_down(va);
 
@@ -357,7 +358,7 @@ static bool vm_do_claim_page(struct page *page) {
 * @param spt 초기화할 보조 페이지 테이블 구조체 포인터
 */
 void supplemental_page_table_init(struct supplemental_page_table *spt) {
-    hash_init(spt, page_hash, page_less, NULL);
+    hash_init(&spt->spt_hash, page_hash, page_less, NULL);
 }
 
 /// @brief 페이지 구조체의 va를 기반으로 해시를 생성하는 함수
@@ -365,7 +366,7 @@ void supplemental_page_table_init(struct supplemental_page_table *spt) {
 /// @return 페이지의 가상 주소를 해시한 64비트 해시 값
 uint64_t page_hash(const struct hash_elem *e, void *aux) {
     struct page *page = hash_entry(e, struct page, hash_elem);
-    return hash_bytes(page->va, sizeof *page->va);
+    return hash_bytes(&page->va, sizeof page->va);  
 }
 
 /*
