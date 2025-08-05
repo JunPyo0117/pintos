@@ -315,7 +315,7 @@ int process_exec(void *f_name) {
 
     /* We first kill the current context */
     process_cleanup();
-
+    supplemental_page_table_init(&thread_current()->spt);
     /* Acquire exec lock to prevent race conditions during file loading */
     lock_acquire(&exec_lock);
     
