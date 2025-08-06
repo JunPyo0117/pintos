@@ -1,47 +1,33 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
-
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
-
-#include "fixed_point.h"  // $Add/fixed_point_h
-#include "threads/interrupt.h"
-#include "threads/synch.h"  // $ feat/fork_handler
-
-//$ADD/write_handler
-#ifdef USERPROG
-/**    @iizxcv
- *     @brief 쓰레드 구조체에 file-table 추가를 위해 헤더추가
- *     @see
- * https://www.notion.so/jactio/write_handler-233c9595474e804f998de012a4d9a075?source=copy_link#233c9595474e80b8bcd0e4ab9d1fa96c
- */
 #include "threads/synch.h"
-#include "userprog/file_abstract.h"
-#endif
-// ADD/write_handler
-
+#include "threads/interrupt.h"
 #ifdef VM
 #include "vm/vm.h"
 #endif
 
 /* States in a thread's life cycle. */
 enum thread_status {
-    THREAD_RUNNING, /* Running thread. */
-    THREAD_READY,   /* Not running but ready to run. */
-    THREAD_BLOCKED, /* Waiting for an event to trigger. */
-    THREAD_DYING    /* About to be destroyed. */
+	THREAD_RUNNING,     /* Running thread. */
+	THREAD_READY,       /* Not running but ready to run. */
+	THREAD_BLOCKED,     /* Waiting for an event to trigger. */
+	THREAD_DYING        /* About to be destroyed. */
 };
 
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int tid_t;
-#define TID_ERROR ((tid_t) - 1) /* Error value for tid_t. */
+#define TID_ERROR ((tid_t) -1)          /* Error value for tid_t. */
 
 /* Thread priorities. */
-#define PRI_MIN 0      /* Lowest priority. */
-#define PRI_DEFAULT 31 /* Default priority. */
-#define PRI_MAX 63     /* Highest priority. */
+#define PRI_MIN 0                       /* Lowest priority. */
+#define PRI_DEFAULT 31                  /* Default priority. */
+#define PRI_MAX 63                      /* Highest priority. */
+#define FDPAGES 3
+#define FDCOUNT_LIMIT FDPAGES * (1 << 9) // 페이지 크기 4kb / 파일 포인터 8바이트 = 512
 
 /* A kernel thread or user process.
  *
@@ -101,85 +87,52 @@ typedef int tid_t;
  * ready state is on the run queue, whereas only a thread in the
  * blocked state is on a semaphore wait list. */
 struct thread {
-    /* Owned by thread.c. */
-    tid_t tid;                 /* Thread identifier. */
-    enum thread_status status; /* Thread state. */
-    char name[16];             /* Name (for debugging purposes). */
-    int priority;              /* Priority. */
+	/* Owned by thread.c. */
+	
+	tid_t tid;                          /* Thread identifier. */
+	enum thread_status status;          /* Thread state. */
+	char name[16];                      /* Name (for debugging purposes). */
+	int priority;                       /* Priority. */
 
-    void *rsp_stack;
+	int original_priority; 		  // 기부 받기 전 우선 순위
+	struct lock *waiting_lock;    // 대기 중인 락
+	struct list donations;        // 기부 받은 리스트들
+	struct list_elem donation_elem; // 기부자로 들어갈때 쓰는 연결점
 
-    //	$feat/timer_sleep
-    /** @brief 스레드를 깨울 tick 시각 초기화 시 0*/
-    uint64_t wake_tick;
-    //	feat/timer_sleep
+	/* Shared between thread.c and synch.c. */
+	struct list_elem elem;              /* List element. */
+	int64_t wakeup_tick; 				// tick이 되면 깨어나야 함
 
-    //$Add/thread_set_nice
-    /**
-     * @brief 프로세스의 nice 값 (우선순위 보정 값)
-     *
-     * 이 값은 유저가 임의로 설정할 수 있으며,
-     * 우선순위 계산 시 사용
-     *	값이 클수록 우선순위 낮아짐
-     * @note 유효한 범위는 -20 ~ 20이며, 기본값은 0입니다.
-     */
-    int nice;
-
-    /**
-     * @brief 최근 CPU 점유율을 나타내는 고정소수점 값
-     *
-     * 이 값은 해당 스레드가 최근에 얼마나 자주 CPU를 점유했는지를 나타내며,
-     * 스케줄러의 우선순위 계산에 사용
-     * 값이 클수록 우선순위가 낮아짐
-     *
-     * @details 1틱마다 값이 갱신됩니다.
-     */
-    fixed_t recent_cpu;
-    // Add/thread_set_nice
-
-    /* Shared between thread.c and synch.c. */
-    struct list_elem elem; /* List element. */
-
-    //	$우선순위 기부
-    struct lock *wait_on_lock;
-    struct list donor_list;
-    struct list_elem donor_elem;
-    //	우선순위 기부
+	/* userprog thread field*/
+	struct file *runn_file;
 
 #ifdef USERPROG
-    /* Owned by userprog/process.c. */
-    uint64_t *pml4; /* Page map level 4 */
+	/* Owned by userprog/process.c. */
+	uint64_t *pml4;                     /* Page map level 4 */
+	int exit_status;
 
-    /**
-     * @iizxcv
-     * @brief write 함수구현을 위해 putbuf사용을 위해 생성.
-     * @see
-     * https://www.notion.so/jactio/write_handler-233c9595474e804f998de012a4d9a075?source=copy_link#233c9595474e80b8bcd0e4ab9d1fa96c
-     */
+	int fd_index; 							// 파일 디스크립터 인덱스
+	// struct file *fd_table[FDCOUNT_LIMIT];	// 파일 디스크립터 테이블 -> 정적 할당
+	struct file **fd_table; // -> 동적 할당하기 위해 변경
+ 
+	struct list child_list; // 자식 리스트
+	struct list_elem child_elem; // 부모의 child_list에 들어갈 때 사용
 
-    struct File **fdt;
-    size_t fd_pg_cnt;
-    size_t open_file_cnt;
+	struct semaphore fork_sema; // fork 완료까지 대기
+	struct semaphore wait_sema; // wait 에서 대기
+	struct semaphore exit_sema; // 종료 시 부모를 꺠움
 
-    // $feat/process-wait
-    struct thread *parent;
-    struct list childs;
-    struct list_elem sibling_elem;
-    struct semaphore wait_sema;
-    struct semaphore fork_sema;
-    struct semaphore exit_sema;
-    int exit_status;
-    // feat/process-wait
-
+	struct intr_frame parent_if; 
 #endif
 #ifdef VM
-    /* Table for whole virtual memory owned by thread. */
-    struct supplemental_page_table spt;
+	/* Table for whole virtual memory owned by thread. */
+	struct supplemental_page_table spt;
+	void *rsp_stack;
 #endif
 
-    /* Owned by thread.c. */
-    struct intr_frame tf; /* Information for switching */
-    unsigned magic;       /* Detects stack overflow. */
+	/* Owned by thread.c. */
+	struct intr_frame tf;               /* Information for switching */
+	unsigned magic;                     /* Detects stack overflow. */
 };
 
 /* If false (default), use round-robin scheduler.
@@ -187,54 +140,35 @@ struct thread {
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
 
-void thread_init(void);
-void thread_start(void);
+bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 
-void thread_tick(void);
-void thread_print_stats(void);
+void thread_init (void);
+void thread_start (void);
 
-typedef void thread_func(void *aux);
-tid_t thread_create(const char *name, int priority, thread_func *, void *);
+void thread_tick (void);
+void thread_print_stats (void);
 
-void thread_block(void);
-void thread_unblock(struct thread *);
+typedef void thread_func (void *aux);
+tid_t thread_create (const char *name, int priority, thread_func *, void *);
 
-struct thread *thread_current(void);
-tid_t thread_tid(void);
-const char *thread_name(void);
+void thread_block (void);
+void thread_unblock (struct thread *);
 
-void thread_exit(void) NO_RETURN;
-void thread_yield(void);
+struct thread *thread_current (void);
+tid_t thread_tid (void);
+const char *thread_name (void);
 
-void thread_yield_r(void);
+void thread_exit (void) NO_RETURN;
+void thread_yield (void);
 
-//	$feat/timer_sleep
-void thread_sleep(int64_t tick);
-void thread_awake(void);
-//	feat/timer_sleep
+int thread_get_priority (void);
+void thread_set_priority (int);
 
-// $feat/thread_priority_less
-bool thread_priority_less(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
-// feat/thread_priority_less
-
-int get_effective_priority(struct thread *);  //	$우선순위 기부
-int thread_get_priority(void);
-void thread_set_priority(int);
-
-int thread_get_nice(void);
-void thread_set_nice(int);
-int thread_get_recent_cpu(void);
-int thread_get_load_avg(void);
-
-void do_iret(struct intr_frame *tf);
-
-// $test-temp/mlfqs
-void mlfq_run_for_sec(void);
-void priority_update(void);
-// test-temp/mlfqs
-
-//$feat/process-wait
-bool is_user_thread(void);
-// feat/process-wait
+int thread_get_nice (void);
+void thread_set_nice (int);
+int thread_get_recent_cpu (void);
+int thread_get_load_avg (void);
+bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
+void do_iret (struct intr_frame *tf);
 
 #endif /* threads/thread.h */
