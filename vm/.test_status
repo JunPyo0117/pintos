@@ -14,7 +14,7 @@ read-bad-fd PASS
 priority-donate-multiple PASS
 args-multiple PASS
 lg-seq-random PASS
-syn-write PASS
+syn-write FAIL
 syn-remove PASS
 priority-donate-one PASS
 mmap-overlap FAIL
@@ -49,7 +49,7 @@ rox-child PASS
 mmap-write FAIL
 alarm-single PASS
 lazy-file FAIL
-pt-bad-addr FAIL
+pt-bad-addr PASS
 read-normal PASS
 lazy-anon PASS
 pt-write-code2 FAIL
@@ -69,13 +69,13 @@ close-twice PASS
 mmap-over-data FAIL
 args-none PASS
 mmap-kernel FAIL
-swap-fork PASS
+swap-fork FAIL
 create-bad-ptr PASS
 read-stdout PASS
 priority-fifo PASS
 wait-bad-pid PASS
 lg-create PASS
-pt-grow-bad FAIL
+pt-grow-bad PASS
 mmap-twice FAIL
 pt-grow-stk-sc FAIL
 exec-read PASS
