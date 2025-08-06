@@ -37,7 +37,9 @@ int write_(int fd, const void *buffer, unsigned size);
 void seek_(int fd, unsigned position);
 unsigned tell_(int fd);
 void close_(int fd);
-void check_address(void *address);
+struct page * check_address(void *address);
+// struct page * check_address(void *addr);
+// void check_valid_buffer(void* buffer, unsigned size, void* rsp, bool to_write);
 
 int dup2(int oldfd, int newfd);
 

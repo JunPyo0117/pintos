@@ -19,6 +19,8 @@
 #include "threads/mmu.h"
 #include "threads/vaddr.h"
 #include "intrinsic.h"
+#include "lib/user/syscall.h"
+
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -285,8 +287,9 @@ int process_exec(void *f_name)
 
 	/* If load failed, quit. */
 	// 로드 실패 시 종료
-	if (!success)
-		return -1;
+	if (!success){
+        exit_(-1);
+    }
 
 	argument_stack(arg_list, arg_cnt, &_if);
 	// hex_dump (_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);

@@ -85,9 +85,11 @@ void syscall_handler (struct intr_frame *f UNUSED)
 		f->R.rax = filesize_(f->R.rdi);
 		break;
 	case SYS_READ:
+        // check_valid_buffer(f->R.rsi, f->R.rdx, f->rsp, 1);
 		f->R.rax = read_(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	case SYS_WRITE:
+        // check_valid_buffer(f->R.rsi, f->R.rdx, f->rsp, 0);
 		f->R.rax = write_(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	case SYS_SEEK:
@@ -113,12 +115,31 @@ void syscall_handler (struct intr_frame *f UNUSED)
 // 		exit_(-1);
 // }
 
-// VM check_address
-void check_address(void *address)
-{	
-	if (is_kernel_vaddr(address) || address == NULL || !spt_find_page(&thread_current()->spt, address))
-		exit_(-1);
+struct page * check_address(void *address)
+{
+    if (is_kernel_vaddr(address) || address == NULL || !spt_find_page(&thread_current()->spt, address))
+        exit_(-1);
+    return spt_find_page(&thread_current()->spt, address);
 }
+
+// VM check_address
+// struct page * check_address(void *addr) {
+//     if (is_kernel_vaddr(addr))
+//     {
+//         exit_(-1);
+//     }
+//     return spt_find_page(&thread_current()->spt, addr);
+// }
+
+// void check_valid_buffer(void* buffer, unsigned size, void* rsp, bool to_write) {
+//     for (int i = 0; i < size; i++) {
+//         struct page* page = check_address(buffer + i);    // 인자로 받은 buffer부터 buffer + size까지의 크기가 한 페이지의 크기를 넘을수도 있음
+//         if(page == NULL)
+//             exit_(-1);
+//         if(to_write == true && page->writable == false)
+//             exit_(-1);
+//     }
+// }
 
 void halt_(void)
 {
