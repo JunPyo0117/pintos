@@ -54,7 +54,9 @@ syscall_init (void) {
 void syscall_handler (struct intr_frame *f UNUSED) 
 {
 	int sys_num = f->R.rax;
-
+#ifdef VM
+    thread_current()->rsp_stack = f->rsp; // 추가
+#endif
 	switch (sys_num)
 	{
 	case SYS_HALT:
@@ -85,11 +87,11 @@ void syscall_handler (struct intr_frame *f UNUSED)
 		f->R.rax = filesize_(f->R.rdi);
 		break;
 	case SYS_READ:
-        // check_valid_buffer(f->R.rsi, f->R.rdx, f->rsp, 1);
+        check_valid_buffer(f->R.rsi, f->R.rdx, f->rsp, 1);
 		f->R.rax = read_(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	case SYS_WRITE:
-        // check_valid_buffer(f->R.rsi, f->R.rdx, f->rsp, 0);
+        check_valid_buffer(f->R.rsi, f->R.rdx, f->rsp, 0);
 		f->R.rax = write_(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	case SYS_SEEK:
@@ -115,31 +117,44 @@ void syscall_handler (struct intr_frame *f UNUSED)
 // 		exit_(-1);
 // }
 
-struct page * check_address(void *address)
-{
-    if (is_kernel_vaddr(address) || address == NULL || !spt_find_page(&thread_current()->spt, address))
-        exit_(-1);
-    return spt_find_page(&thread_current()->spt, address);
-}
+// struct page * check_address(void *address)
+// {
+//     if (is_kernel_vaddr(address) || address == NULL || !spt_find_page(&thread_current()->spt, address))
+//         exit_(-1);
+//     return spt_find_page(&thread_current()->spt, address);
+// }
 
 // VM check_address
-// struct page * check_address(void *addr) {
-//     if (is_kernel_vaddr(addr))
-//     {
-//         exit_(-1);
-//     }
-//     return spt_find_page(&thread_current()->spt, addr);
-// }
+struct page * check_address(void *addr) {
+    if (is_kernel_vaddr(addr) || addr == NULL || !spt_find_page(&thread_current()->spt, addr))
+    {
+        exit_(-1);
+    }
+    return spt_find_page(&thread_current()->spt, addr);
+}
 
-// void check_valid_buffer(void* buffer, unsigned size, void* rsp, bool to_write) {
-//     for (int i = 0; i < size; i++) {
-//         struct page* page = check_address(buffer + i);    // 인자로 받은 buffer부터 buffer + size까지의 크기가 한 페이지의 크기를 넘을수도 있음
-//         if(page == NULL)
-//             exit_(-1);
-//         if(to_write == true && page->writable == false)
-//             exit_(-1);
-//     }
-// }
+void check_valid_buffer(void* buffer, unsigned size, void* rsp, bool to_write) {
+    for (int i = 0; i < size; i++) {
+        void *addr = buffer + i;
+        
+        // 기본 검증
+        if (is_kernel_vaddr(addr) || addr == NULL) {
+            exit_(-1);
+        }
+        
+        struct page *page = spt_find_page(&thread_current()->spt, addr);
+        if (page == NULL) {
+            // 페이지가 없으면 스택 영역인지만 확인
+            void *current_rsp = thread_current()->rsp_stack;
+            if (!((current_rsp - 8 <= addr) && 
+                  (USER_STACK - (1 << 20) < addr) && 
+                  (addr < USER_STACK))) {
+                exit_(-1);  // 스택 영역이 아니면 invalid
+            }
+            // 스택 영역이면 통과 (실제 할당은 page fault에서)
+        } 
+    }
+}
 
 void halt_(void)
 {
@@ -232,7 +247,7 @@ int filesize_(int fd)
 
 int read_(int fd, void *buffer, unsigned size)
 {
-	check_address(buffer);
+	// check_address(buffer);
 	int read_bytes = 0;
 	
 	if (fd == 0) // 파일 디스크립터가 0이면
@@ -269,7 +284,7 @@ int read_(int fd, void *buffer, unsigned size)
 
 int write_(int fd, const void *buffer, unsigned size)
 {
-	check_address(buffer);
+	// check_address(buffer);
 
 	if (fd <= 0)
 	{
