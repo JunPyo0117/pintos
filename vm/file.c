@@ -104,6 +104,7 @@ do_mmap (void *addr, size_t length, int writable,
 		file_page->offset = page_offset;
 		file_page->read_bytes = page_read_bytes;
 		file_page->zero_bytes = PGSIZE - page_read_bytes;
+		file_page->page_count = page_count;  // 전체 페이지 수 저장
 		
 		if (!vm_alloc_page_with_initializer(VM_FILE, page_addr, writable, file_backed_initializer, file_page)) {
 			free(file_page);
