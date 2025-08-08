@@ -379,7 +379,7 @@ void *mmap_(void *addr, size_t length, int writable, int fd, off_t offset) {
 		return NULL;
 	} 
 
-    struct file *file = process_get_file(fd);
+    struct file *file = file_reopen(process_get_file(fd));
 	size_t file_size = filesize_(fd);
 
 	size_t page_count = DIV_ROUND_UP(length, PGSIZE);
