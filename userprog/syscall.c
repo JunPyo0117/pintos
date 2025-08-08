@@ -127,26 +127,32 @@ struct page * check_address(void *addr) {
 }
 
 void check_valid_buffer(void* buffer, unsigned size, void* rsp, bool to_write) {
-    for (int i = 0; i < size; i++) {
-        void *addr = buffer + i;
-        
-        // 기본 검증
-        if (is_kernel_vaddr(addr) || addr == NULL) {
+    if (buffer == NULL || size == 0) return;
+    
+    // 버퍼의 시작과 끝 주소를 페이지 단위로 정렬
+    void *start_addr = pg_round_down(buffer);
+    void *end_addr = pg_round_down((char*)buffer + size - 1);
+    
+    // 각 페이지에 대해 검증
+    for (void *addr = start_addr; addr <= end_addr; addr += PGSIZE) {
+        // 커널 주소 검증
+        if (is_kernel_vaddr(addr)) {
             exit_(-1);
         }
         
+        // 페이지 테이블에서 페이지 찾기
         struct page *page = spt_find_page(&thread_current()->spt, addr);
         if (page == NULL) {
-            // 페이지가 없으면 스택 영역인지만 확인
-            void *current_rsp = thread_current()->rsp_stack;
-            if (!((current_rsp - 8 <= addr) && 
+            // 페이지가 없으면 스택 영역인지 확인
+            // syscall_handler에서 전달받은 rsp 사용
+            if (!((rsp - 8 <= addr) && 
                   (USER_STACK - (1 << 20) < addr) && 
                   (addr < USER_STACK))) {
-                exit_(-1);  // 스택 영역이 아니면 invalid
+                exit_(-1);
             }
-            // 스택 영역이면 통과 (실제 할당은 page fault에서)
+            // 스택 영역이면 통과 (페이지 폴트에서 할당됨)
         } else {
-            // 페이지가 있으면 권한 체크
+            // 페이지가 있으면 쓰기 권한 확인
             if (to_write && !page->writable) {
                 exit_(-1);
             }
