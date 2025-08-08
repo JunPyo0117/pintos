@@ -117,13 +117,6 @@ void syscall_handler (struct intr_frame *f UNUSED)
 // 		exit_(-1);
 // }
 
-// struct page * check_address(void *address)
-// {
-//     if (is_kernel_vaddr(address) || address == NULL || !spt_find_page(&thread_current()->spt, address))
-//         exit_(-1);
-//     return spt_find_page(&thread_current()->spt, address);
-// }
-
 // VM check_address
 struct page * check_address(void *addr) {
     if (is_kernel_vaddr(addr) || addr == NULL || !spt_find_page(&thread_current()->spt, addr))
