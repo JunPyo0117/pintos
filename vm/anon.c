@@ -48,7 +48,7 @@ void vm_anon_init(void) {
     }
 
     //(필요시) 스왑 관리를 위한 락을 초기화
-    lock_init(&swap_lock)
+    lock_init(&swap_lock);
 }
 
 /*
@@ -68,7 +68,7 @@ bool anon_initializer(struct page *page, enum vm_type type, void *kva) {
     page->operations = &anon_ops;
 
     struct anon_page *anon_page = &page->anon;
-    anon_page->swap_slot_index = (size_t)-1;
+    anon_page->swap_slot_index = BITMAP_ERROR;
 
     return true;
 }
@@ -90,23 +90,27 @@ static bool anon_swap_in(struct page *page, void *kva) {
     
     lock_acquire(&swap_lock);
     struct anon_page *anon_page = &page->anon;
-    size_t swap_slot_index = page->anon.swap_slot_index;
+    size_t swap_slot_index = anon_page->swap_slot_index;
 
-    if (swap_slot_index == BITMAP_ERROR) {
-        lock_release(&swap_lock);
-        return false;
-    }
+    if (swap_slot_index == BITMAP_ERROR)
+        goto err;
+
+    if (!bitmap_test(swap_table, swap_slot_index))
+        goto err;
     
     for (size_t i = 0; i < PGSIZE / DISK_SECTOR_SIZE; i++) {
         disk_read(swap_disk,
                   swap_slot_index * (PGSIZE / DISK_SECTOR_SIZE) + i,
                   kva + i * DISK_SECTOR_SIZE);
     }
-
+    
     bitmap_reset(swap_table, swap_slot_index);
     page->anon.swap_slot_index = BITMAP_ERROR;
     lock_release(&swap_lock);
     return true;
+err:
+    lock_release(&swap_lock);
+    return false;
 }
 
 /* Swap out the page by writing contents to the swap disk. */
