@@ -74,12 +74,39 @@ bool anon_initializer(struct page *page, enum vm_type type, void *kva) {
 }
 
 /* Swap in the page by read contents from the swap disk. */
+/**
+ * @brief 익명 페이지를 스왑 디스크에서 메모리로 스왑 인하는 함수
+ * 
+ * @details 스왑 디스크의 스왑 슬롯에서 페이지 데이터를 읽어와서 kva에 복사
+ *          스왑 테이블에서 해당 슬롯을 해제하여 다시 사용 가능하게 표시
+ * 
+ * @param page 스왑 인할 익명 페이지 포인터
+ * @param kva 페이지 데이터를 저장할 커널 가상 주소
+ * @return 스왑 인 성공 시 true, 실패 시 false 반환
+ */
 static bool anon_swap_in(struct page *page, void *kva) {
     if (!page || !kva)
         return false;
     
+    lock_acquire(&swap_lock);
     struct anon_page *anon_page = &page->anon;
+    size_t swap_slot_index = page->anon.swap_slot_index;
 
+    if (swap_slot_index == BITMAP_ERROR) {
+        lock_release(&swap_lock);
+        return false;
+    }
+    
+    for (size_t i = 0; i < PGSIZE / DISK_SECTOR_SIZE; i++) {
+        disk_read(swap_disk,
+                  swap_slot_index * (PGSIZE / DISK_SECTOR_SIZE) + i,
+                  kva + i * DISK_SECTOR_SIZE);
+    }
+
+    bitmap_reset(swap_table, swap_slot_index);
+    page->anon.swap_slot_index = BITMAP_ERROR;
+    lock_release(&swap_lock);
+    return true;
 }
 
 /* Swap out the page by writing contents to the swap disk. */
