@@ -380,7 +380,21 @@ void *mmap_(void *addr, size_t length, int writable, int fd, off_t offset) {
 	} 
 
     struct file *file = file_reopen(process_get_file(fd));
+	if (file == NULL) {
+		return NULL;
+	}
+	
 	size_t file_size = filesize_(fd);
+	if (file_size == -1 || file_size == 0) {
+		file_close(file);
+		return NULL;
+	}
+	
+	// 매핑 길이가 파일 크기를 초과하는지 확인
+	if (offset >= file_size || length > file_size - offset) {
+		file_close(file);
+		return NULL;
+	}
 
 	size_t page_count = DIV_ROUND_UP(length, PGSIZE);
 

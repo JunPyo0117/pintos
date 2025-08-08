@@ -75,6 +75,11 @@ do_mmap (void *addr, size_t length, int writable,
         return NULL;
     }
 	
+	// 매핑 길이가 파일 크기를 초과하는지 확인
+	if (offset >= file_size || length > file_size - offset) {
+		return NULL;
+	}
+	
 	size_t page_count = DIV_ROUND_UP(length, PGSIZE);
 
 	for (size_t i = 0; i < page_count; i++) {
@@ -83,13 +88,17 @@ do_mmap (void *addr, size_t length, int writable,
 		size_t page_read_bytes = (length - (i * PGSIZE) < PGSIZE) ? length - (i * PGSIZE) : PGSIZE;
 		
 		struct file_page *file_page = malloc(sizeof(struct file_page));
+		if (file_page == NULL) {
+			return NULL;
+		}
+		
 		file_page->file = file;
 		file_page->offset = page_offset;
 		file_page->read_bytes = page_read_bytes;
 		file_page->zero_bytes = PGSIZE - page_read_bytes;
 		
 		if (!vm_alloc_page_with_initializer(VM_FILE, page_addr, writable, file_backed_initializer, file_page)) {
-			vm_dealloc_page(file_page);
+			free(file_page);
 			return NULL;
 		}
 	}
