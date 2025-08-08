@@ -146,13 +146,18 @@ void check_valid_buffer(void* buffer, unsigned size, void* rsp, bool to_write) {
         if (page == NULL) {
             // 페이지가 없으면 스택 영역인지만 확인
             void *current_rsp = thread_current()->rsp_stack;
-            if (!((current_rsp - 8 <= addr) && 
+            if (!((current_rsp - 32 <= addr) && 
                   (USER_STACK - (1 << 20) < addr) && 
                   (addr < USER_STACK))) {
                 exit_(-1);  // 스택 영역이 아니면 invalid
             }
             // 스택 영역이면 통과 (실제 할당은 page fault에서)
-        } 
+        } else {
+            // 페이지가 있으면 권한 체크
+            if (to_write && !page->writable) {
+                exit_(-1);
+            }
+        }
     }
 }
 
