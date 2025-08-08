@@ -146,7 +146,7 @@ void check_valid_buffer(void* buffer, unsigned size, void* rsp, bool to_write) {
         if (page == NULL) {
             // 페이지가 없으면 스택 영역인지만 확인
             void *current_rsp = thread_current()->rsp_stack;
-            if (!((current_rsp - 32 <= addr) && 
+            if (!((current_rsp - 8 <= addr) && 
                   (USER_STACK - (1 << 20) < addr) && 
                   (addr < USER_STACK))) {
                 exit_(-1);  // 스택 영역이 아니면 invalid
