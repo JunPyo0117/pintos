@@ -29,6 +29,7 @@ static void process_cleanup (void);
 static bool load (const char *file_name, struct intr_frame *if_);
 static void initd (void *f_name);
 static void __do_fork (void *);
+extern struct lock filesys_lock;
 
 struct segment_info {
     struct file *file;
@@ -283,7 +284,10 @@ int process_exec(void *f_name)
 	
 	/* And then load the binary */
 	// ELF 실행 파일 로드
+
+	lock_acquire(&filesys_lock);
 	success = load (arg_list[0], &_if);
+	lock_release(&filesys_lock);
 
 	/* If load failed, quit. */
 	// 로드 실패 시 종료
