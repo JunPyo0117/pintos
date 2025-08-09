@@ -8,10 +8,9 @@ enum vm_type;
 
 struct file_page {
 	struct file *file;
-  off_t offset;
-  size_t read_bytes;
-  size_t zero_bytes;
-  size_t page_count;  // 매핑된 총 페이지 수
+	off_t ofs;
+	uint32_t read_bytes;
+	uint32_t zero_bytes;
 };
 
 void vm_file_init (void);
