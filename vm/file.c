@@ -116,6 +116,40 @@ do_mmap (void *addr, size_t length, int writable,
 }
 
 /* Do the munmap */
-void
-do_munmap (void *addr) {
+void do_munmap(void *addr) {
+    struct thread *t = thread_current();
+    struct page *page = spt_find_page(&t->spt, addr);
+    
+    if (page == NULL)
+        return;
+    
+    // 매핑된 페이지 수 확인
+    int page_count = page->file.page_count; // 또는 mapped_page_count
+    
+    for (int i = 0; i < page_count; i++) {
+        struct page *p = spt_find_page(&t->spt, addr + (PGSIZE * i));
+        if (p == NULL)
+            break;
+            
+        // dirty bit 체크 후 파일에 쓰기
+        if (pml4_is_dirty(t->pml4, p->va)) {
+            file_write_at(p->file.file, p->frame->kva, 
+                         p->file.read_bytes, p->file.offset);
+            //pml4_set_dirty(t->pml4, p->va, false);
+        }
+        
+        // 페이지 테이블에서 제거
+        pml4_clear_page(t->pml4, p->va);
+        
+        // 물리 메모리 해제
+        if (p->frame)
+            palloc_free_page(p->frame->kva);
+            //page->frame = NULL;
+            
+        // SPT에서 제거
+        hash_delete(&t->spt.pages, &p->hash_elem);
+        //free(page);
+    }
+    
+    //lock_release(&filesys_lock);
 }
