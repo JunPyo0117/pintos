@@ -39,6 +39,13 @@
         "malloc.h": "c",
         "inspect.h": "c",
         "anon.h": "c",
-        "uninit.h": "c"
+        "uninit.h": "c",
+        "*.tcc": "c",
+        "chrono": "c",
+        "algorithm": "c",
+        "numeric": "c",
+        "hash.h": "c",
+        "round.h": "c",
+        "stdint.h": "c"
     }
 }
