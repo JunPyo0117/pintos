@@ -147,7 +147,7 @@ void do_munmap(void *addr) {
             //page->frame = NULL;
             
         // SPT에서 제거
-        hash_delete(&t->spt.pages, &p->hash_elem);
+        hash_delete(&t->spt.spt_hash, &p->hash_elem);
         //free(page);
     }
     
