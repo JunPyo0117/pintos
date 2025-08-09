@@ -156,7 +156,7 @@ mmap (void *addr, size_t length, int writable, int fd, off_t offset) {
 
 void
 munmap (void *addr) {
-	do_munmap(addr);
+	syscall1 (SYS_MUNMAP, addr);
 }
 
 bool
