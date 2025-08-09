@@ -410,9 +410,7 @@ void *mmap_(void *addr, size_t length, int writable, int fd, off_t offset) {
 }
 
 void munmap(void *addr){
-	if(addr == NULL || is_kernel_vaddr(addr) || pg_ofs(addr) != 0){
-		return;
-	}
+	check_address(addr);
 
 	do_munmap(addr);
 }
