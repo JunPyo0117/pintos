@@ -1,6 +1,10 @@
 #include <syscall.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <sys/types.h>
 #include "../syscall-nr.h"
+
 
 __attribute__((always_inline))
 static __inline int64_t syscall (uint64_t num_, uint64_t a1_, uint64_t a2_,
@@ -152,7 +156,7 @@ mmap (void *addr, size_t length, int writable, int fd, off_t offset) {
 
 void
 munmap (void *addr) {
-	syscall1 (SYS_MUNMAP, addr);
+	do_munmap(addr);
 }
 
 bool

@@ -103,6 +103,9 @@ void syscall_handler (struct intr_frame *f UNUSED)
 	case SYS_CLOSE:
 		close_(f->R.rdi);
 		break;
+	case SYS_MUNMAP:
+		munmap(f->R.rdi);
+		break;
 	default:
 		exit_(-1);
 		break;
