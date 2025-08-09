@@ -1,8 +1,8 @@
-#include <syscall.h>
+#include "include/lib/user/syscall.h"
+
 #include <stdint.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <sys/types.h>
+#include <syscall.h>
+
 #include "../syscall-nr.h"
 
 

@@ -409,7 +409,7 @@ void *mmap_(void *addr, size_t length, int writable, int fd, off_t offset) {
 	return result;
 }
 
-void munmap(void *addr){
+void munmap_(void *addr){
 	check_address(addr);
 
 	do_munmap(addr);
