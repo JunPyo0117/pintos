@@ -31,13 +31,6 @@ static void initd (void *f_name);
 static void __do_fork (void *);
 extern struct lock filesys_lock;
 
-struct segment_info {
-    struct file *file;
-    off_t ofs;
-    size_t page_read_bytes;
-    size_t page_zero_bytes;
-};
-
 /* General process initializer for initd and other process. */
 static void
 process_init (void) {
@@ -839,7 +832,7 @@ install_page (void *upage, void *kpage, bool writable) {
  * @note aux는 segment_info 구조체로 캐스팅하여 사용
  * @note 파일 읽기 후 반드시 file_close()와 free() 호출하여 리소스 정리
  */
-static bool lazy_load_segment(struct page *page, void *aux) {
+bool lazy_load_segment(struct page *page, void *aux) {
     /* TODO: Load the segment from the file */
     /* TODO: This called when the first page fault occurs on address VA. */
     /* TODO: VA is available when calling this function. */

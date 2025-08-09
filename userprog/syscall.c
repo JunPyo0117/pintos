@@ -107,7 +107,7 @@ void syscall_handler (struct intr_frame *f UNUSED)
 		close_(f->R.rdi);
 		break;
 	case SYS_MMAP:
-		mmap_(f->R.rdi, f->R.rsi, f->R.rdx, f->R.rcx, f->R.r8);
+		f->R.rax = mmap_(f->R.rdi, f->R.rsi, f->R.rdx, f->R.r10, f->R.r8);
 		break;
 	case SYS_MUNMAP:
 		munmap_(f->R.rdi);
@@ -369,7 +369,9 @@ void close_(int fd)
  * @return 성공시 매핑된 주소, 실패시 NULL
  */
 void *mmap_(void *addr, size_t length, int writable, int fd, off_t offset) {
-	check_address(addr);
+	if (is_kernel_vaddr(addr) || is_kernel_vaddr((int)addr + length)) {
+        return NULL;
+    }
 
 	if (pg_ofs(addr) != 0 || length == 0) {
 		return NULL;
@@ -379,22 +381,20 @@ void *mmap_(void *addr, size_t length, int writable, int fd, off_t offset) {
 		return NULL;
 	} 
 
-    struct file *file = file_reopen(process_get_file(fd));
+    struct file *file = process_get_file(fd);
 	if (file == NULL) {
 		return NULL;
 	}
 	
 	size_t file_size = filesize_(fd);
 	if (file_size == -1 || file_size == 0) {
-		file_close(file);
 		return NULL;
 	}
 	
-	// 매핑 길이가 파일 크기를 초과하는지 확인
-	if (offset >= file_size || length > file_size - offset) {
-		file_close(file);
-		return NULL;
-	}
+	// // 매핑 길이가 파일 크기를 초과하는지 확인
+	// if (offset >= file_size || length > file_size - offset) {
+	// 	return NULL;
+	// }
 
 	size_t page_count = DIV_ROUND_UP(length, PGSIZE);
 
