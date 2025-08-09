@@ -285,9 +285,7 @@ int process_exec(void *f_name)
 	/* And then load the binary */
 	// ELF 실행 파일 로드
 
-	lock_acquire(&filesys_lock);
 	success = load (arg_list[0], &_if);
-	lock_release(&filesys_lock);
 
 	/* If load failed, quit. */
 	// 로드 실패 시 종료
@@ -673,7 +671,6 @@ static bool load (const char *file_name, struct intr_frame *if_)
 	 * TODO: Implement argument passing (see project2/argument_passing.html). */
 
 	success = true;
-
 done:
 	/* We arrive here whether the load is successful or not. */
 	// file_close (file); 실행 중에 닫아버리면 write 보호가 유지되지 못함

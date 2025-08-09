@@ -14,7 +14,7 @@ read-bad-fd PASS
 priority-donate-multiple PASS
 args-multiple PASS
 lg-seq-random PASS
-syn-write FAIL
+syn-write PASS
 syn-remove PASS
 priority-donate-one PASS
 mmap-overlap FAIL
@@ -137,4 +137,4 @@ args-single PASS
 write-stdin PASS
 read-zero PASS
 bad-read2 PASS
-syn-read FAIL
+syn-read PASS
