@@ -16,10 +16,13 @@
 #include "include/threads/vaddr.h"
 #include "threads/mmu.h"
 #include "lib/string.h"
+#include "lib/round.h"
 #include "threads/palloc.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
+void *mmap_(void *addr, size_t length, int writable, int fd, off_t offset);
+void munmap_(void *addr);
 struct lock filesys_lock; // 파일 읽기 쓰기 lock
 
 /* System call.
@@ -102,6 +105,12 @@ void syscall_handler (struct intr_frame *f UNUSED)
 		break;
 	case SYS_CLOSE:
 		close_(f->R.rdi);
+		break;
+	case SYS_MMAP:
+		mmap_(f->R.rdi, f->R.rsi, f->R.rdx, f->R.rcx, f->R.r8);
+		break;
+	case SYS_MUNMAP:
+		munmap_(f->R.rdi);
 		break;
 	default:
 		exit_(-1);
@@ -344,4 +353,58 @@ void close_(int fd)
 	
 	process_close_file(fd);	
 	file_close(file);
+}
+
+/**
+ * @brief 메모리 매핑 시스템 콜
+ * 
+ * 파일을 메모리에 매핑합니다. 지정된 주소에 파일의 내용을 매핑하여
+ * 파일을 메모리처럼 접근할 수 있게 합니다.
+ * 
+ * @param addr 매핑할 가상 주소 (페이지 정렬되어야 함)
+ * @param length 매핑할 길이
+ * @param writable 쓰기 가능 여부
+ * @param fd 파일 디스크립터
+ * @param offset 파일 내 오프셋
+ * @return 성공시 매핑된 주소, 실패시 NULL
+ */
+void *mmap_(void *addr, size_t length, int writable, int fd, off_t offset) {
+	check_address(addr);
+
+	if (pg_ofs(addr) != 0 || length == 0) {
+		return NULL;
+	}
+
+    if (fd == 0 || fd == 1) {
+		return NULL;
+	} 
+
+    struct file *file = file_reopen(process_get_file(fd));
+	if (file == NULL) {
+		return NULL;
+	}
+	
+	size_t file_size = filesize_(fd);
+	if (file_size == -1 || file_size == 0) {
+		file_close(file);
+		return NULL;
+	}
+	
+	// 매핑 길이가 파일 크기를 초과하는지 확인
+	if (offset >= file_size || length > file_size - offset) {
+		file_close(file);
+		return NULL;
+	}
+
+	size_t page_count = DIV_ROUND_UP(length, PGSIZE);
+
+    for (size_t i = 0; i < page_count; i++) {
+		void *check_addr = addr + (i * PGSIZE);
+		if (spt_find_page(&thread_current()->spt, check_addr) != NULL) {
+			return NULL;
+		}
+	}
+    void *result = do_mmap(addr, length, writable, file, offset);
+    
+	return result;
 }
