@@ -390,11 +390,10 @@ void *mmap_(void *addr, size_t length, int writable, int fd, off_t offset) {
 	if (file_size == -1 || file_size == 0) {
 		return NULL;
 	}
-	
-	// // 매핑 길이가 파일 크기를 초과하는지 확인
-	// if (offset >= file_size || length > file_size - offset) {
-	// 	return NULL;
-	// }
+
+	if (offset != pg_round_down(offset) || offset % PGSIZE != 0) {
+        return NULL;
+	}
 
 	size_t page_count = DIV_ROUND_UP(length, PGSIZE);
 

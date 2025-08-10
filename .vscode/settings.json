@@ -46,6 +46,16 @@
         "numeric": "c",
         "hash.h": "c",
         "round.h": "c",
-        "stdint.h": "c"
+        "stdint.h": "c",
+        "array": "c",
+        "compare": "c",
+        "functional": "c",
+        "ratio": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c",
+        "*.test_config": "c",
+        "mmu.h": "c",
+        "main.h": "c"
     }
 }
