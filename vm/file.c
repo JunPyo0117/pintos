@@ -4,6 +4,7 @@
 #include "lib/round.h"
 #include "threads/vaddr.h"
 #include "include/userprog/process.h"
+#include "threads/mmu.h"
 
 static bool file_backed_swap_in (struct page *page, void *kva);
 static bool file_backed_swap_out (struct page *page);
@@ -41,15 +42,50 @@ file_backed_initializer (struct page *page, enum vm_type type, void *kva) {
 
 /* Swap in the page by read contents from the file. */
 static bool
-file_backed_swap_in (struct page *page, void *kva) {
-	struct file_page *file_page UNUSED = &page->file;
+file_backed_swap_in(struct page *page, void *kva) {
+    struct file_page *file_page = &page->file;
+    
+    // 1. 파일에서 page_read_bytes만큼 읽어서 kva에 채우기
+    int read_result = file_read_at(file_page->file, kva, file_page->read_bytes, file_page->ofs);
+    if (read_result != (int)file_page->read_bytes) {
+        return false;  // 읽기 실패 시 false 반환
+    }
+
+    // 2. 나머지 zero_bytes만큼 0으로 채우기
+    if (file_page->zero_bytes > 0) {
+        memset(kva + file_page->read_bytes, 0, file_page->zero_bytes);
+    }
+
+    // 3. 물리 프레임에 매핑된 kva 설정
+    page->frame->kva = kva;
+
+    return true;
 }
 
 /* Swap out the page by writeback contents to the file. */
 static bool
-file_backed_swap_out (struct page *page) {
-	struct file_page *file_page UNUSED = &page->file;
+file_backed_swap_out(struct page *page) {
+    struct file_page *file_page = &page->file;
+
+    // 1. dirty 체크
+    if (pml4_is_dirty(thread_current()->pml4, page->va)) {
+        // 2. 변경된 내용을 파일에 기록
+        file_write_at(file_page->file, page->frame->kva, file_page->read_bytes, file_page->ofs);
+        pml4_set_dirty(thread_current()->pml4, page->va, false);
+    }
+
+    // 3. 페이지 테이블에서 해제
+    pml4_clear_page(thread_current()->pml4, page->va);
+
+    // 4. 물리 메모리 해제
+    if (page->frame) {
+        palloc_free_page(page->frame->kva);
+        page->frame = NULL;
+    }
+
+    return true;
 }
+
 
 /* Destory the file backed page. PAGE will be freed by the caller. */
 static void
@@ -165,7 +201,7 @@ void do_munmap(void *addr) {
         if (pml4_is_dirty(t->pml4, p->va)) {
             file_write_at(p->file.file, p->frame->kva, 
                          p->file.read_bytes, p->file.ofs);
-            //pml4_set_dirty(t->pml4, p->va, false);
+            pml4_set_dirty(t->pml4, p->va, false);
         }
 
         // 페이지 테이블에서 제거
@@ -174,12 +210,11 @@ void do_munmap(void *addr) {
         // 물리 메모리 해제
         if (p->frame)
             palloc_free_page(p->frame->kva);
-            //page->frame = NULL;
+            page->frame = NULL;
 
         // SPT에서 제거
         hash_delete(&t->spt.spt_hash, &p->hash_elem);
-        //free(page);
+        free(p);
     }
-
     //lock_release(&filesys_lock);
 }
