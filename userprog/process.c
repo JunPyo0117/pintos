@@ -853,7 +853,6 @@ bool lazy_load_segment(struct page *page, void *aux) {
     
     memset(kva + page_read_bytes, 0, page_zero_bytes);
     
-    file_close(file);
     free(segment_info);
 	return true;
 }
