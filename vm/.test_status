@@ -126,7 +126,7 @@ fork-read PASS
 write-zero PASS
 alarm-multiple PASS
 create-exists PASS
-mmap-bad-off FAIL
+mmap-bad-off PASS
 open-normal PASS
 bad-jump PASS
 pt-big-stk-obj PASS
