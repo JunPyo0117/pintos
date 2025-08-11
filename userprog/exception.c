@@ -140,7 +140,7 @@ page_fault (struct intr_frame *f) {
 	write = (f->error_code & PF_W) != 0;
 	user = (f->error_code & PF_U) != 0;
 
-	if ((!not_present && write) || (fault_addr < 0x400000 || fault_addr >= USER_STACK)) {
+	if ((!not_present && write) || (fault_addr < 0x400000)) {
 		exit_(-1);
    	}
 #ifdef VM
