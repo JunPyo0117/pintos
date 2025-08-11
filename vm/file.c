@@ -5,6 +5,7 @@
 #include "threads/vaddr.h"
 #include "include/userprog/process.h"
 #include "threads/mmu.h"
+#include "lib/user/syscall.h"
 
 static bool file_backed_swap_in (struct page *page, void *kva);
 static bool file_backed_swap_out (struct page *page);
@@ -122,7 +123,9 @@ do_mmap (void *addr, size_t length, int writable,
 	// TODO: 2. fd에 대응하는 struct file * 구하기
 	// - 열린 파일 디스크립터 테이블에서 찾고, 실패 시 NULL 반환
 	// - file을 reopen하여 별도 참조를 유지 (중복 닫힘 방지)
+	lock_acquire(&filesys_lock);
 	struct file *f = file_reopen(file);
+	lock_release(&filesys_lock);
 	int total_page_count = length / PGSIZE;
 	if (length % PGSIZE != 0)
 		total_page_count += 1;
@@ -205,16 +208,16 @@ void do_munmap(void *addr) {
         }
 
         // 페이지 테이블에서 제거
-        pml4_clear_page(t->pml4, p->va);
+        // pml4_clear_page(t->pml4, p->va);
 
         // 물리 메모리 해제
         if (p->frame)
-            palloc_free_page(p->frame->kva);
+            // palloc_free_page(p->frame->kva);
             page->frame = NULL;
 
         // SPT에서 제거
-        hash_delete(&t->spt.spt_hash, &p->hash_elem);
-        free(p);
+        // hash_delete(&t->spt.spt_hash, &p->hash_elem);
+        // free(p);
     }
     //lock_release(&filesys_lock);
 }

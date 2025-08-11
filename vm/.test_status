@@ -14,7 +14,7 @@ read-bad-fd PASS
 priority-donate-multiple PASS
 args-multiple PASS
 lg-seq-random PASS
-syn-write PASS
+syn-write FAIL
 syn-remove PASS
 priority-donate-one PASS
 mmap-overlap PASS
@@ -40,7 +40,7 @@ priority-donate-chain PASS
 create-bound PASS
 rox-multichild PASS
 lg-random PASS
-page-merge-seq PASS
+page-merge-seq FAIL
 pt-bad-read PASS
 priority-condvar PASS
 priority-donate-nest PASS
@@ -69,7 +69,7 @@ close-twice PASS
 mmap-over-data PASS
 args-none PASS
 mmap-kernel PASS
-swap-fork PASS
+swap-fork FAIL
 create-bad-ptr PASS
 read-stdout PASS
 priority-fifo PASS
@@ -109,7 +109,7 @@ priority-change PASS
 write-boundary PASS
 wait-killed PASS
 lg-full PASS
-swap-file FAIL
+swap-file PASS
 close-bad-fd PASS
 alarm-negative PASS
 multi-child-fd PASS
@@ -137,4 +137,4 @@ args-single PASS
 write-stdin PASS
 read-zero PASS
 bad-read2 PASS
-syn-read PASS
+syn-read FAIL
