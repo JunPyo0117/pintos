@@ -21,7 +21,7 @@ typedef int off_t;
 #define EXIT_SUCCESS 0          /* Successful execution. */
 #define EXIT_FAILURE 1          /* Unsuccessful execution. */
 
-
+extern struct lock filesys_lock; // 파일 읽기 쓰기 lock
 /* Projects 2 and later. */
 void halt_(void);
 void exit_(int status);

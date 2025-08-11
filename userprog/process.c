@@ -390,23 +390,22 @@ struct thread *get_child_tid(tid_t child_tid)
 void process_exit (void) 
 {
 	struct thread *curr = thread_current ();
-
 	// 파일 디스크립터 닫기
 	for (int fd = 0; fd < curr->fd_index; fd++)
 	{
 		struct file *f = curr->fd_table[fd];
-
+		
 		if (f != NULL)
 		{
 			file_close(f);
 			curr->fd_table[fd] = NULL;
 		}
 	}
-
+	
 	// 러닝 중인 파일 닫기
 	if (curr->runn_file)
-		file_close(curr->runn_file);
-
+	file_close(curr->runn_file);
+	
 	// 테이블 메모리 해제
 	palloc_free_multiple(curr->fd_table, FDPAGES);
 	process_cleanup ();
@@ -421,7 +420,7 @@ process_cleanup (void) {
 
 #ifdef VM
 	supplemental_page_table_kill (&curr->spt);
-#endif
+#else
 
 	uint64_t *pml4;
 	/* Destroy the current process's page directory and switch back
@@ -439,6 +438,7 @@ process_cleanup (void) {
 		pml4_activate (NULL);
 		pml4_destroy (pml4);
 	}
+#endif
 }
 
 /* Sets up the CPU for running user code in the nest thread.
@@ -579,6 +579,7 @@ static bool load (const char *file_name, struct intr_frame *if_)
 	process_activate (thread_current ());
 
 	/* Open executable file. */
+	lock_acquire(&filesys_lock);
 	file = filesys_open (file_name);
 	if (file == NULL) {
 		printf ("load: %s: open failed\n", file_name);
@@ -665,6 +666,7 @@ static bool load (const char *file_name, struct intr_frame *if_)
 
 	success = true;
 done:
+	lock_release(&filesys_lock);
 	/* We arrive here whether the load is successful or not. */
 	// file_close (file); 실행 중에 닫아버리면 write 보호가 유지되지 못함
 	return success;

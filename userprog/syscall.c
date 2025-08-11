@@ -218,17 +218,21 @@ int wait_(pid_t pid)
 bool create_(const char *file, unsigned initial_size)
 {
 	check_address(file);
-	
+	lock_acquire(&filesys_lock);
+	bool result = filesys_create(file, initial_size);
+	lock_release(&filesys_lock);
 	// 주어진 이름과 초기 크기로 새로운 파일 생성하는 함수
-	return filesys_create(file, initial_size);
+	return result;
 }
 
 bool remove_(const char *file)
 {
 	check_address(file);
-	
+	lock_acquire(&filesys_lock);
+	bool result = filesys_remove(file);
+	lock_release(&filesys_lock);
 	// 주어진 이름의 파일 삭제하는 함수
-	return filesys_remove(file);
+	return result;
 }
 
 int open_(const char *file)
