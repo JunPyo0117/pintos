@@ -95,7 +95,7 @@ create-null PASS
 pt-grow-stack PASS
 fork-recursive PASS
 open-bad-ptr PASS
-mmap-inherit FAIL
+mmap-inherit PASS
 mmap-unmap PASS
 write-normal PASS
 mmap-off PASS
@@ -121,7 +121,7 @@ mmap-shuffle PASS
 wait-simple PASS
 exec-once PASS
 args-many PASS
-mmap-clean FAIL
+mmap-clean PASS
 fork-read PASS
 write-zero PASS
 alarm-multiple PASS
