@@ -121,7 +121,7 @@ mmap-shuffle PASS
 wait-simple PASS
 exec-once PASS
 args-many PASS
-mmap-clean FAIL
+mmap-clean PASS
 fork-read PASS
 write-zero PASS
 alarm-multiple PASS

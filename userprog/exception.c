@@ -142,17 +142,17 @@ page_fault (struct intr_frame *f) {
 
 	if ((!not_present && write) || (fault_addr < 0x400000 || fault_addr >= USER_STACK)) {
 		exit_(-1);
-   }
+   	}
 #ifdef VM
 	/* For project 3 and later. */
 	if (vm_try_handle_fault (f, fault_addr, user, write, not_present)) {
       return;
-   }
+   	}
 #endif
 
-   if (user) {
+   	if (user) {
       exit_(-1);
-   }
+   	}
 	/* Count page faults. */
 	page_fault_cnt++;
 
