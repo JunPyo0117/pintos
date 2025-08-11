@@ -11,6 +11,7 @@
 #include "lib/kernel/hash.h"
 #include "lib/string.h"
 #include "threads/vaddr.h"
+#include "userprog/process.h"
 
 /* Global frame table */
 struct list frame_table;
@@ -415,6 +416,23 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst, struct su
                                                 parent_page->uninit.aux)) 
                 goto err;
         }
+        else if (parent_type == VM_FILE){
+			struct segment_info *file_aux = malloc(sizeof(struct segment_info));
+            file_aux->file = parent_page->file.file;
+            file_aux->ofs = parent_page->file.ofs;
+            file_aux->page_read_bytes = parent_page->file.read_bytes;
+            file_aux->page_zero_bytes = parent_page->file.zero_bytes;
+
+            if (!vm_alloc_page_with_initializer(parent_type, parent_page->va, parent_page->writable, NULL, file_aux)) {
+                free(file_aux);
+                goto err;
+            }
+
+            struct page *file_page = spt_find_page(dst, parent_page->va);
+            file_backed_initializer(file_page, parent_type, NULL);
+            file_page->frame = parent_page->frame;
+            pml4_set_page(thread_current()->pml4, file_page->va, parent_page->frame->kva, parent_page->writable);
+		}
         else 
         {
             // 이미 초기화된 페이지들 처리
@@ -441,7 +459,6 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst, struct su
     }
 
     return true;
-
 err:
     supplemental_page_table_kill(dst);
     return false;
