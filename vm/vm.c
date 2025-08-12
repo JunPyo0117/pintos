@@ -187,9 +187,30 @@ static struct frame *vm_get_victim(void) {
  */
 static struct frame *vm_evict_frame(void) {
     struct frame *victim = vm_get_victim();
-    /* TODO: swap out the victim and return the evicted frame. */
-    swap_out(victim->page);
-
+    
+    // victim이 NULL인지 확인
+    if (victim == NULL) {
+        return NULL;
+    }
+    
+    // victim에 연결된 페이지가 있는지 확인
+    if (victim->page == NULL) {
+        // 페이지가 없는 프레임이면 그대로 재사용 가능
+        return victim;
+    }
+    
+    // 스왑 아웃 수행
+    bool swap_result = swap_out(victim->page);
+    if (!swap_result) {
+        // 스왑 실패 시 프레임을 다시 frame_table에 돌려놓기
+        list_push_front(&frame_table, &victim->frame_elem);
+        return NULL;
+    }
+    
+    // 스왑 성공 시 페이지-프레임 연결 해제
+    victim->page->frame = NULL;
+    victim->page = NULL;
+    
     return victim;
 }
 
@@ -228,6 +249,10 @@ static struct frame *vm_get_frame(void) {
         if (frame == NULL) { 
             PANIC("vm_evict_frame returned NULL");
         }
+
+        // 교체된 프레임을 frame_table 맨 뒤에 다시 추가
+        // (FIFO 순서 유지를 위해)
+        list_push_back(&frame_table, &frame->frame_elem);
 
         return frame;
     }
