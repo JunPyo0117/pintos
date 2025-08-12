@@ -80,7 +80,6 @@ file_backed_swap_out(struct page *page) {
 	
     // 4. 물리 메모리 해제
     if (page->frame) {
-		// palloc_free_page(page->frame->kva);
 		page->frame->page = NULL;
         page->frame = NULL;
     }
@@ -208,17 +207,8 @@ void do_munmap(void *addr) {
             pml4_set_dirty(t->pml4, p->va, false);
         }
 
-        // 페이지 테이블에서 제거
-        // pml4_clear_page(t->pml4, p->va);
-
         // 물리 메모리 해제
         if (p->frame)
-            // palloc_free_page(p->frame->kva);
             page->frame = NULL;
-
-        // SPT에서 제거
-        // hash_delete(&t->spt.spt_hash, &p->hash_elem);
-        // free(p);
     }
-    //lock_release(&filesys_lock);
 }
