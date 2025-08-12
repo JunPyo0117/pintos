@@ -579,7 +579,7 @@ static bool load (const char *file_name, struct intr_frame *if_)
 	process_activate (thread_current ());
 
 	/* Open executable file. */
-	lock_acquire(&filesys_lock);
+	// lock_acquire(&filesys_lock);
 	file = filesys_open (file_name);
 	if (file == NULL) {
 		printf ("load: %s: open failed\n", file_name);
@@ -666,7 +666,7 @@ static bool load (const char *file_name, struct intr_frame *if_)
 
 	success = true;
 done:
-	lock_release(&filesys_lock);
+	// lock_release(&filesys_lock);
 	/* We arrive here whether the load is successful or not. */
 	// file_close (file); 실행 중에 닫아버리면 write 보호가 유지되지 못함
 	return success;

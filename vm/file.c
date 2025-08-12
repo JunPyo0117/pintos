@@ -71,16 +71,17 @@ file_backed_swap_out(struct page *page) {
     // 1. dirty 체크
     if (pml4_is_dirty(thread_current()->pml4, page->va)) {
         // 2. 변경된 내용을 파일에 기록
-        file_write_at(file_page->file, page->frame->kva, file_page->read_bytes, file_page->ofs);
+        file_write_at(file_page->file, page->va, file_page->read_bytes, file_page->ofs);
         pml4_set_dirty(thread_current()->pml4, page->va, false);
     }
 
-    // 3. 페이지 테이블에서 해제
-    pml4_clear_page(thread_current()->pml4, page->va);
-
+	// 3. 페이지 테이블에서 해제
+	pml4_clear_page(thread_current()->pml4, page->va);
+	
     // 4. 물리 메모리 해제
     if (page->frame) {
-        palloc_free_page(page->frame->kva);
+		// palloc_free_page(page->frame->kva);
+		page->frame->page = NULL;
         page->frame = NULL;
     }
 
