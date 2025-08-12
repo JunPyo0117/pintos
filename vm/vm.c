@@ -192,7 +192,9 @@ static struct frame *vm_evict_frame(void) {
     if (victim == NULL) {
         return NULL;
     }
-    
+
+    struct page *page = victim->page;
+
     // victim에 연결된 페이지가 있는지 확인
     if (victim->page == NULL) {
         // 페이지가 없는 프레임이면 그대로 재사용 가능
@@ -208,7 +210,7 @@ static struct frame *vm_evict_frame(void) {
     }
     
     // 스왑 성공 시 페이지-프레임 연결 해제
-    victim->page->frame = NULL;
+    page->frame = NULL;
     victim->page = NULL;
     
     return victim;
