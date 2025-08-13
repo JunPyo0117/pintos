@@ -11,6 +11,7 @@
 #include "lib/kernel/hash.h"
 #include "lib/string.h"
 #include "threads/vaddr.h"
+#include "userprog/process.h"
 
 /* Global frame table */
 struct list frame_table;
@@ -186,9 +187,32 @@ static struct frame *vm_get_victim(void) {
  */
 static struct frame *vm_evict_frame(void) {
     struct frame *victim = vm_get_victim();
-    /* TODO: swap out the victim and return the evicted frame. */
-    swap_out(victim->page);
+    
+    // victim이 NULL인지 확인
+    if (victim == NULL) {
+        return NULL;
+    }
 
+    struct page *page = victim->page;
+
+    // victim에 연결된 페이지가 있는지 확인
+    if (victim->page == NULL) {
+        // 페이지가 없는 프레임이면 그대로 재사용 가능
+        return victim;
+    }
+    
+    // 스왑 아웃 수행
+    bool swap_result = swap_out(victim->page);
+    if (!swap_result) {
+        // 스왑 실패 시 프레임을 다시 frame_table에 돌려놓기
+        list_push_front(&frame_table, &victim->frame_elem);
+        return NULL;
+    }
+    
+    // 스왑 성공 시 페이지-프레임 연결 해제
+    page->frame = NULL;
+    victim->page = NULL;
+    
     return victim;
 }
 
@@ -227,6 +251,10 @@ static struct frame *vm_get_frame(void) {
         if (frame == NULL) { 
             PANIC("vm_evict_frame returned NULL");
         }
+
+        // 교체된 프레임을 frame_table 맨 뒤에 다시 추가
+        // (FIFO 순서 유지를 위해)
+        list_push_back(&frame_table, &frame->frame_elem);
 
         return frame;
     }
@@ -415,6 +443,23 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst, struct su
                                                 parent_page->uninit.aux)) 
                 goto err;
         }
+        else if (parent_type == VM_FILE){
+			struct segment_info *file_aux = malloc(sizeof(struct segment_info));
+            file_aux->file = parent_page->file.file;
+            file_aux->ofs = parent_page->file.ofs;
+            file_aux->page_read_bytes = parent_page->file.read_bytes;
+            file_aux->page_zero_bytes = parent_page->file.zero_bytes;
+
+            if (!vm_alloc_page_with_initializer(parent_type, parent_page->va, parent_page->writable, NULL, file_aux)) {
+                free(file_aux);
+                goto err;
+            }
+
+            struct page *file_page = spt_find_page(dst, parent_page->va);
+            file_backed_initializer(file_page, parent_type, NULL);
+            file_page->frame = parent_page->frame;
+            pml4_set_page(thread_current()->pml4, file_page->va, parent_page->frame->kva, parent_page->writable);
+		}
         else 
         {
             // 이미 초기화된 페이지들 처리
@@ -441,7 +486,6 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst, struct su
     }
 
     return true;
-
 err:
     supplemental_page_table_kill(dst);
     return false;

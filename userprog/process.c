@@ -31,13 +31,6 @@ static void initd (void *f_name);
 static void __do_fork (void *);
 extern struct lock filesys_lock;
 
-struct segment_info {
-    struct file *file;
-    off_t ofs;
-    size_t page_read_bytes;
-    size_t page_zero_bytes;
-};
-
 /* General process initializer for initd and other process. */
 static void
 process_init (void) {
@@ -285,9 +278,7 @@ int process_exec(void *f_name)
 	/* And then load the binary */
 	// ELF 실행 파일 로드
 
-	lock_acquire(&filesys_lock);
 	success = load (arg_list[0], &_if);
-	lock_release(&filesys_lock);
 
 	/* If load failed, quit. */
 	// 로드 실패 시 종료
@@ -399,23 +390,22 @@ struct thread *get_child_tid(tid_t child_tid)
 void process_exit (void) 
 {
 	struct thread *curr = thread_current ();
-
 	// 파일 디스크립터 닫기
 	for (int fd = 0; fd < curr->fd_index; fd++)
 	{
 		struct file *f = curr->fd_table[fd];
-
+		
 		if (f != NULL)
 		{
 			file_close(f);
 			curr->fd_table[fd] = NULL;
 		}
 	}
-
+	
 	// 러닝 중인 파일 닫기
 	if (curr->runn_file)
-		file_close(curr->runn_file);
-
+	file_close(curr->runn_file);
+	
 	// 테이블 메모리 해제
 	palloc_free_multiple(curr->fd_table, FDPAGES);
 	process_cleanup ();
@@ -430,7 +420,7 @@ process_cleanup (void) {
 
 #ifdef VM
 	supplemental_page_table_kill (&curr->spt);
-#endif
+#else
 
 	uint64_t *pml4;
 	/* Destroy the current process's page directory and switch back
@@ -448,6 +438,7 @@ process_cleanup (void) {
 		pml4_activate (NULL);
 		pml4_destroy (pml4);
 	}
+#endif
 }
 
 /* Sets up the CPU for running user code in the nest thread.
@@ -588,6 +579,7 @@ static bool load (const char *file_name, struct intr_frame *if_)
 	process_activate (thread_current ());
 
 	/* Open executable file. */
+	// lock_acquire(&filesys_lock);
 	file = filesys_open (file_name);
 	if (file == NULL) {
 		printf ("load: %s: open failed\n", file_name);
@@ -673,8 +665,8 @@ static bool load (const char *file_name, struct intr_frame *if_)
 	 * TODO: Implement argument passing (see project2/argument_passing.html). */
 
 	success = true;
-
 done:
+	// lock_release(&filesys_lock);
 	/* We arrive here whether the load is successful or not. */
 	// file_close (file); 실행 중에 닫아버리면 write 보호가 유지되지 못함
 	return success;
@@ -842,7 +834,7 @@ install_page (void *upage, void *kpage, bool writable) {
  * @note aux는 segment_info 구조체로 캐스팅하여 사용
  * @note 파일 읽기 후 반드시 file_close()와 free() 호출하여 리소스 정리
  */
-static bool lazy_load_segment(struct page *page, void *aux) {
+bool lazy_load_segment(struct page *page, void *aux) {
     /* TODO: Load the segment from the file */
     /* TODO: This called when the first page fault occurs on address VA. */
     /* TODO: VA is available when calling this function. */
@@ -863,7 +855,6 @@ static bool lazy_load_segment(struct page *page, void *aux) {
     
     memset(kva + page_read_bytes, 0, page_zero_bytes);
     
-    file_close(file);
     free(segment_info);
 	return true;
 }
